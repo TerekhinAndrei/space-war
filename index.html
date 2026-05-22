@@ -494,7 +494,10 @@ scene.fog = new THREE.FogExp2(0x000010, 0.0008);
 const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.5, 8000);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(innerWidth, innerHeight);
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+// Cap the render resolution — on Retina/4K displays a pixel ratio of 2
+// quadruples the fragment work (main render AND every bloom pass). 1.5 is
+// the sweet spot: crisp wireframes, but ~1.8x cheaper than full 2x.
+renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
 renderer.setClearColor(0x000008);
 document.body.appendChild(renderer.domElement);
 
@@ -2730,6 +2733,9 @@ function updatePlayer(dt) {
   }
   const edgeProx = Math.max(0, (dFromCenter - (COMBAT_ZONE - 200)) / 200);
   combatZoneSphere.material.opacity = Math.min(0.45, edgeProx * 0.45);
+  // Skip drawing the ~1500-segment boundary sphere entirely when it's
+  // invisible (the player is nowhere near the edge — i.e. almost always).
+  combatZoneSphere.visible = edgeProx > 0;
   zoneWarningEl.classList.toggle('active', outside);
   if (outside) {
     const over = dFromCenter - COMBAT_ZONE;
@@ -3336,11 +3342,31 @@ function updateLeadIndicator() {
   leadEl.classList.add('active');
 }
 
+// Pooled off-screen arrow elements — created once, repositioned each frame.
+// (Rebuilding innerHTML every frame forced a full SVG re-parse + relayout.)
+const offArrowPool = [];
+function getOffArrow(i) {
+  let el = offArrowPool[i];
+  if (!el) {
+    el = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    el.setAttribute('class', 'off-arrow');
+    el.setAttribute('width', '20');
+    el.setAttribute('height', '20');
+    el.setAttribute('viewBox', '-10 -10 20 20');
+    const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    poly.setAttribute('points', '-7,-5 -7,5 7,0');
+    poly.setAttribute('fill', 'currentColor');
+    el.appendChild(poly);
+    offScreenEl.appendChild(el);
+    offArrowPool[i] = el;
+  }
+  return el;
+}
 function updateOffScreenIndicators() {
-  let html = '';
   const margin = 50;
   const halfW = innerWidth / 2 - margin;
   const halfH = innerHeight / 2 - margin;
+  let n = 0;
   for (const e of enemies) {
     const v = projTmp.copy(e.obj.position).project(camera);
     const behind = v.z > 1;
@@ -3348,21 +3374,22 @@ function updateOffScreenIndicators() {
     if (onScreen) continue;
     let ndcX = v.x, ndcY = v.y;
     if (behind) { ndcX = -ndcX; ndcY = -ndcY; }
-    // Screen-space direction from center (screen-Y is flipped vs NDC).
-    const dx = ndcX, dy = -ndcY;
-    const angle = Math.atan2(dy, dx);
+    const angle = Math.atan2(-ndcY, ndcX);
     const cosA = Math.cos(angle), sinA = Math.sin(angle);
     const scale = (Math.abs(cosA) * halfH > Math.abs(sinA) * halfW)
       ? halfW / Math.abs(cosA)
       : halfH / Math.abs(sinA);
     const sx = innerWidth / 2 + cosA * scale;
     const sy = innerHeight / 2 + sinA * scale;
-    const rotDeg = angle * 180 / Math.PI;
-    // Colour-code threats to match the radar: boss magenta, ace white.
     const col = e.isBoss ? '#ff44ff' : e.isAce ? '#ffffff' : '#ff3344';
-    html += `<svg class="off-arrow" style="left:${sx}px;top:${sy}px;color:${col};transform:translate(-50%,-50%) rotate(${rotDeg}deg)" width="20" height="20" viewBox="-10 -10 20 20"><polygon points="-7,-5 -7,5 7,0" fill="currentColor"/></svg>`;
+    const el = getOffArrow(n++);
+    el.style.display = '';
+    el.style.left = sx + 'px';
+    el.style.top = sy + 'px';
+    el.style.color = col;
+    el.style.transform = `translate(-50%,-50%) rotate(${angle * 180 / Math.PI}deg)`;
   }
-  offScreenEl.innerHTML = html;
+  for (let i = n; i < offArrowPool.length; i++) offArrowPool[i].style.display = 'none';
 }
 
 // ====== RADAR ======
@@ -3436,6 +3463,26 @@ function updateRadar() {
 }
 
 // ====== MAIN LOOP ======
+// Adaptive quality: if the framerate stays low, step down rendering cost
+// so the game runs smoothly on weaker GPUs without the player touching
+// anything. Level 0 = pixelRatio 1.5 + bloom, 1 = pixelRatio 1 + bloom,
+// 2 = pixelRatio 1, no bloom. One-directional (only degrades — no churn).
+let qualityLevel = 0;
+let useBloom = true;
+let lowFpsTime = 0;
+function degradeQuality() {
+  if (qualityLevel === 0) {
+    qualityLevel = 1;
+    renderer.setPixelRatio(1);
+    composer.setSize(innerWidth, innerHeight);
+    showToast('GRAPHICS ↓ — RESOLUTION', '#ffaa22');
+  } else if (qualityLevel === 1) {
+    qualityLevel = 2;
+    useBloom = false;
+    showToast('GRAPHICS ↓ — BLOOM OFF', '#ffaa22');
+  }
+}
+
 let fpsAccum = 0, fpsFrames = 0;
 function animate() {
   const raw = clock.getDelta();          // real delta (unclamped) for FPS
@@ -3445,6 +3492,11 @@ function animate() {
     const fps = Math.round(fpsFrames / fpsAccum);
     fpsEl.textContent = fps;
     fpsEl.style.color = fps >= 50 ? '#00ff66' : fps >= 30 ? '#ffaa22' : '#ff3344';
+    // Sustained sub-45 FPS during play → drop a quality notch.
+    if (started && !paused && player.hull > 0 && qualityLevel < 2) {
+      lowFpsTime = fps < 45 ? lowFpsTime + fpsAccum : 0;
+      if (lowFpsTime > 3) { degradeQuality(); lowFpsTime = 0; }
+    }
     fpsAccum = 0; fpsFrames = 0;
   }
   if (started && !paused && player.hull > 0) {
@@ -3467,7 +3519,8 @@ function animate() {
   updateLeadIndicator();
   updateOffScreenIndicators();
   updateTouchUI();
-  composer.render();
+  if (useBloom) composer.render();
+  else renderer.render(scene, camera);
   requestAnimationFrame(animate);
 }
 updateCreditsHUD();
