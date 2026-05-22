@@ -1680,6 +1680,19 @@ function leadPoint(shooterPos, targetPos, targetVel, projSpeed, out) {
 }
 
 let reinforceTimer = 0;
+// A spawn point out at the combat-zone perimeter in direction `dir` from
+// the player. Enemies warp in at the boundary and fly INTO the arena —
+// no more popping in nearby. The ray-vs-sphere reach is clamped so it's
+// never a pop-in (min 600u) and never an absurd cross-arena trek (max 1000u).
+function zoneEdgeSpawn(dir) {
+  const d = dir.clone().normalize();
+  const P = player.obj.position;
+  const R = COMBAT_ZONE + 70;
+  const pd = P.dot(d);
+  const t = -pd + Math.sqrt(Math.max(0, pd * pd - (P.lengthSq() - R * R)));
+  return d.multiplyScalar(Math.min(Math.max(t, 600), 1000)).add(P);
+}
+
 function updateSpawner(dt) {
   // No trickle reinforcements during a boss/ace duel or a station-defense
   // mission — those fights are deliberately spawn-scripted; extra fighters
@@ -1711,13 +1724,10 @@ function updateSpawner(dt) {
     }
     candidateAngles.sort((x, y) => y.score - x.score);
     const angle = candidateAngles[0].a;
-    const dist = 300 + Math.random() * 120;
-    const y = (Math.random() - 0.5) * 90;
-    spawnEnemy(new THREE.Vector3(
-      player.obj.position.x + Math.cos(angle) * dist,
-      player.obj.position.y + y,
-      player.obj.position.z + Math.sin(angle) * dist
-    ), pickEnemyType());
+    const pos = zoneEdgeSpawn(new THREE.Vector3(
+      Math.cos(angle), (Math.random() - 0.5) * 0.5, Math.sin(angle)
+    ));
+    spawnEnemy(pos, pickEnemyType());
   }
 }
 
@@ -1759,11 +1769,11 @@ function spawnWave(n) {
     remaining -= groupSize;
 
     const angle = baseRot + (g / numGroups) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
-    const dist  = 290 + Math.random() * 150;
-    const yOff  = (Math.random() - 0.5) * 110;
-    const cx = player.obj.position.x + Math.cos(angle) * dist;
-    const cz = player.obj.position.z + Math.sin(angle) * dist;
-    const cy = player.obj.position.y + yOff;
+    // Each group warps in at the combat-zone perimeter and flies inward.
+    const center = zoneEdgeSpawn(new THREE.Vector3(
+      Math.cos(angle), (Math.random() - 0.5) * 0.5, Math.sin(angle)
+    ));
+    const cx = center.x, cy = center.y, cz = center.z;
 
     // Formation axes: "forward" points from group center toward the player,
     // "right" is the wedge's lateral axis.
