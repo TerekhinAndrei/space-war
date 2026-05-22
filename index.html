@@ -295,39 +295,49 @@
      ammo; score/kills are on the end screen). One purpose per screen region. */
   body.touch #bottom-right { display: none; }   /* X/Y/Z coords */
   body.touch #bottom-left  { display: none; }   /* vel / power / target */
-  body.touch #top-right div:not(:first-child) { display: none; }  /* score line only */
+  body.touch #top-right    { display: none; }   /* score — not needed mid-flight on mobile */
   body.touch #crosshair { width: 46px; height: 46px; }
   body.touch .panel { font-size: 10px; padding: 5px 8px; }
   body.touch #top-left  { top: 8px; left: 8px; min-width: 0; }
-  body.touch #top-right { top: 8px; right: 64px; min-width: 0; text-align: right; }
   body.touch .bar { width: 66px; }
   body.touch #radar { width: 104px; height: 104px; bottom: 8px; }
   body.touch #radar canvas { width: 100%; height: 100%; }
-  body.touch #mission-hud { top: 8px; min-width: 0; padding: 4px 12px; }
+  body.touch #mission-hud { top: 8px; min-width: 0; max-width: 56vw; padding: 4px 12px; }
   body.touch #mission-progress { font-size: 12px; }
   /* Toasts move to the free left strip below the bars — clear of mission-hud */
   body.touch #toasts { top: 66px; left: 10px; transform: none; align-items: flex-start; }
   body.touch .toast { font-size: 11px; padding: 5px 12px; }
   body.touch #overlay .box, body.touch #shop-overlay .box, body.touch #mission-overlay .box {
-    min-width: 0; max-width: 94vw; padding: 20px 22px;
+    min-width: 0; max-width: 94vw; padding: 18px 22px;
   }
   body.touch #overlay h1, body.touch #mission-overlay h1, body.touch #shop-overlay h1 { font-size: 32px; }
   body.touch #overlay p, body.touch #mission-overlay .m-brief { font-size: 11px; }
-  body.touch #mission-overlay .box { max-height: 90vh; overflow-y: auto; }
+  body.touch #mission-overlay .box { max-height: 92vh; overflow-y: auto; }
+  /* Control-hint blocks: show only the relevant input scheme */
+  .help-touch { display: none; }
+  body.touch .help-desktop { display: none; }
+  body.touch .help-touch { display: block; }
   /* Very short landscape phones — shrink the in-flight HUD further */
   @media (max-height: 400px) {
-    body.touch #top-left, body.touch #top-right, body.touch #mission-hud { font-size: 9px; }
+    body.touch #top-left, body.touch #mission-hud { font-size: 9px; }
     body.touch .bar { width: 56px; height: 7px; }
-    body.touch #radar { width: 86px; height: 86px; }
+    body.touch #radar { width: 84px; height: 84px; }
     body.touch #mission-progress { font-size: 11px; }
     body.touch #toasts { top: 58px; }
   }
-  @media (max-height: 430px) {
-    #overlay .box, #shop-overlay .box, #mission-overlay .box { padding: 14px 20px; }
-    #overlay h1, #mission-overlay h1, #shop-overlay h1 { font-size: 24px; margin-bottom: 6px; }
-    #overlay h2 { margin-bottom: 10px; }
-    #overlay p { margin: 2px 0; }
-    #overlay .start { margin-top: 12px; }
+  /* Short overlays (landscape phones) — selectors carry body.touch so they
+     out-specify the base body.touch overlay rules above. */
+  @media (max-height: 440px) {
+    body.touch #overlay .box, body.touch #shop-overlay .box,
+    body.touch #mission-overlay .box { padding: 12px 22px; }
+    body.touch #overlay h1, body.touch #mission-overlay h1,
+    body.touch #shop-overlay h1 { font-size: 22px; letter-spacing: 4px; margin-bottom: 4px; }
+    body.touch #overlay h2, body.touch #mission-overlay h2,
+    body.touch #shop-overlay h2 { margin-bottom: 8px; font-size: 10px; }
+    body.touch #overlay p { margin: 1px 0; line-height: 1.5; }
+    body.touch #overlay .start { margin-top: 10px; }
+    body.touch #mission-list { gap: 5px; margin: 8px 0; }
+    body.touch .mission-row { padding: 7px 12px; }
   }
 </style>
 </head>
@@ -405,7 +415,7 @@
   <div class="stick" id="stick-r"><div class="lbl">THRUST</div><div class="knob"></div></div>
   <div class="tbtn" id="tb-fire">FIRE</div>
   <div class="tbtn" id="tb-boost">BOOST</div>
-  <div class="tbtn" id="tb-weapon">LASER<small>tap = switch</small></div>
+  <div class="tbtn" id="tb-weapon">LASER</div>
   <div class="tbtn" id="tb-pause">II</div>
 </div>
 
@@ -440,16 +450,25 @@
   <div class="box">
     <h1>SPACE WAR</h1>
     <h2>RETRO 3D COMBAT SIMULATOR</h2>
-    <p>Mouse — aim (yaw / pitch)</p>
-    <p><span class="key">LMB</span> or <span class="key">SPACE</span> — fire</p>
-    <p><span class="key">W</span> <span class="key">S</span> — thrust forward / back</p>
-    <p><span class="key">A</span> <span class="key">D</span> — strafe left / right</p>
-    <p><span class="key">Q</span> <span class="key">E</span> — roll left / right</p>
-    <p><span class="key">1</span> laser · <span class="key">2</span> pulse · <span class="key">3</span> missiles (needs lock)</p>
-    <p><span class="key">TAB</span> — power distribution · <span class="key">B</span> — upgrade shop</p>
-    <p><span class="key">M</span> — sound · <span class="key">SHIFT</span> boost · <span class="key">X</span> stop · <span class="key">ESC</span> pause</p>
-    <p style="opacity:0.85">Collect crystals dropped by enemies · dock at the station slowly — it fully repairs you</p>
-    <p style="margin-top:14px;opacity:0.85">HI: <span id="title-hiscore">0</span> · CREDITS: <span id="title-credits">0</span> · press <span class="key">B</span> to open the shop</p>
+    <!-- Keyboard / mouse instructions — desktop only -->
+    <div class="help-desktop">
+      <p>Mouse — aim (yaw / pitch)</p>
+      <p><span class="key">LMB</span> or <span class="key">SPACE</span> — fire</p>
+      <p><span class="key">W</span> <span class="key">S</span> — thrust forward / back</p>
+      <p><span class="key">A</span> <span class="key">D</span> — strafe left / right</p>
+      <p><span class="key">Q</span> <span class="key">E</span> — roll left / right</p>
+      <p><span class="key">1</span> laser · <span class="key">2</span> pulse · <span class="key">3</span> missiles (needs lock)</p>
+      <p><span class="key">TAB</span> — power distribution · <span class="key">B</span> — upgrade shop</p>
+      <p><span class="key">M</span> — sound · <span class="key">SHIFT</span> boost · <span class="key">X</span> stop · <span class="key">ESC</span> pause</p>
+    </div>
+    <!-- Touch instructions — mobile only -->
+    <div class="help-touch">
+      <p>Left stick — steer · Right stick — thrust &amp; strafe</p>
+      <p><span class="key">FIRE</span> auto-fire toggle · <span class="key">BOOST</span> · <span class="key">WPN</span> switch</p>
+      <p>Tap <span class="key">II</span> to pause</p>
+    </div>
+    <p style="opacity:0.85">Collect crystals dropped by enemies · dock at the station to fully repair</p>
+    <p style="margin-top:14px;opacity:0.85">HI: <span id="title-hiscore">0</span> · CREDITS: <span id="title-credits">0</span></p>
     <p class="start">▶ CLICK — SELECT MISSION</p>
   </div>
 </div>
@@ -2539,15 +2558,21 @@ function pauseGame() {
   silenceEngine();
   overlay.style.display = 'flex';
   const obj = mission.def ? mission.def.name : '';
-  overlayBox.innerHTML = `
-    <h1>PAUSED</h1>
-    <h2>${obj}</h2>
-    <p>SCORE: ${score} · KILLS: ${kills} · WAVE: ${wave}</p>
+  const controls = IS_TOUCH ? `
+    <p style="margin-top:14px">Left stick — steer · Right stick — thrust &amp; strafe</p>
+    <p><span class="key">FIRE</span> auto-fire · <span class="key">BOOST</span> · <span class="key">WPN</span> switch</p>
+  ` : `
     <p style="margin-top:14px">Controls:</p>
     <p>Mouse — aim · <span class="key">LMB</span>/<span class="key">SPACE</span> fire</p>
     <p><span class="key">W</span><span class="key">S</span> thrust · <span class="key">A</span><span class="key">D</span> strafe · <span class="key">Q</span><span class="key">E</span> roll</p>
     <p><span class="key">1</span><span class="key">2</span><span class="key">3</span> weapons · <span class="key">TAB</span> power · <span class="key">B</span> shop · <span class="key">M</span> sound</p>
     <p><span class="key">SHIFT</span> boost · <span class="key">X</span> stop</p>
+  `;
+  overlayBox.innerHTML = `
+    <h1>PAUSED</h1>
+    <h2>${obj}</h2>
+    <p>SCORE: ${score} · KILLS: ${kills} · WAVE: ${wave}</p>
+    ${controls}
     <p class="start">▶ CLICK TO RESUME</p>
   `;
 }
@@ -3191,6 +3216,7 @@ function updateTarget() {
 }
 
 // ====== HUD ======
+const hudEl = document.getElementById('hud');
 const hullBar = document.getElementById('hull-bar');
 const shieldBar = document.getElementById('shield-bar');
 const energyBar = document.getElementById('energy-bar');
@@ -3218,6 +3244,11 @@ const posZ = document.getElementById('pos-z');
 const fpsEl = document.getElementById('fps');
 
 function updateHUD() {
+  // The flight HUD is only meaningful in active play — hide it entirely
+  // behind the title / mission-select / pause / shop overlays so it
+  // doesn't bleed through their semi-transparent background.
+  hudEl.style.display = (started && !paused) ? '' : 'none';
+  if (!(started && !paused)) return;
   const hullFrac = player.hull / player.maxHull;
   hullBar.style.width   = (hullFrac * 100) + '%';
   shieldBar.style.width = (player.shield / player.maxShield * 100) + '%';
