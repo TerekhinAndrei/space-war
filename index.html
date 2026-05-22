@@ -238,14 +238,15 @@
   }
   .tbtn.pressed { background: rgba(0,255,102,0.3); box-shadow: 0 0 18px rgba(0,255,102,0.6); }
   .tbtn small { font-size: 8px; opacity: 0.65; letter-spacing: 1px; }
-  #tb-fire   { right: 22px; bottom: 116px; width: 96px; height: 96px;
-    border-radius: 50%; font-size: 15px; border-color: #ff6644; color: #ff6644;
+  /* Bottom-right control cluster — tight grouping, no overlap with HUD */
+  #tb-fire   { right: 20px; bottom: 92px; width: 88px; height: 88px;
+    border-radius: 50%; font-size: 14px; border-color: #ff6644; color: #ff6644;
     text-shadow: 0 0 6px #ff6644; box-shadow: 0 0 14px rgba(255,102,68,0.35); }
   #tb-fire.pressed { background: rgba(255,102,68,0.32); }
-  #tb-boost  { right: 132px; bottom: 130px; width: 70px; height: 70px;
-    border-radius: 50%; font-size: 12px; }
-  #tb-weapon { right: 24px; bottom: 224px; width: 92px; height: 46px; font-size: 13px; }
-  #tb-pause  { right: 16px; top: 14px; width: 46px; height: 46px; font-size: 18px; }
+  #tb-boost  { right: 116px; bottom: 104px; width: 62px; height: 62px;
+    border-radius: 50%; font-size: 11px; }
+  #tb-weapon { right: 22px; bottom: 188px; width: 84px; height: 40px; font-size: 12px; }
+  #tb-pause  { right: 14px; top: 12px; width: 44px; height: 44px; font-size: 17px; }
 
   /* Orientation gate — space combat needs landscape */
   #orient-warning {
@@ -260,23 +261,40 @@
   body.touch.portrait #orient-warning { display: flex; }
 
   /* ===== RESPONSIVE / MOBILE LAYOUT ===== */
-  body.touch #bottom-right { display: none; }      /* X/Y/Z not useful on mobile */
-  body.touch #crosshair { width: 48px; height: 48px; }
+  /* In flight, mobile keeps only what's actionable: survival bars (top-left),
+     mission objective (top-center), score + pause (top-right), radar, and the
+     control cluster. Coords / velocity / power / target readouts are cut —
+     they're non-actionable on touch or shown elsewhere (weapon button shows
+     ammo; score/kills are on the end screen). One purpose per screen region. */
+  body.touch #bottom-right { display: none; }   /* X/Y/Z coords */
+  body.touch #bottom-left  { display: none; }   /* vel / power / target */
+  body.touch #top-right div:not(:first-child) { display: none; }  /* score line only */
+  body.touch #crosshair { width: 46px; height: 46px; }
   body.touch .panel { font-size: 10px; padding: 5px 8px; }
   body.touch #top-left  { top: 8px; left: 8px; min-width: 0; }
-  body.touch #top-right { top: 8px; right: 70px; min-width: 0; }
-  body.touch #bottom-left { bottom: auto; top: 128px; left: 8px; }
-  body.touch .bar { width: 70px; }
-  body.touch #radar { width: 116px; height: 116px; bottom: 10px; }
+  body.touch #top-right { top: 8px; right: 64px; min-width: 0; text-align: right; }
+  body.touch .bar { width: 66px; }
+  body.touch #radar { width: 104px; height: 104px; bottom: 8px; }
   body.touch #radar canvas { width: 100%; height: 100%; }
-  body.touch #mission-hud { top: 8px; min-width: 0; padding: 4px 10px; }
+  body.touch #mission-hud { top: 8px; min-width: 0; padding: 4px 12px; }
   body.touch #mission-progress { font-size: 12px; }
+  /* Toasts move to the free left strip below the bars — clear of mission-hud */
+  body.touch #toasts { top: 66px; left: 10px; transform: none; align-items: flex-start; }
+  body.touch .toast { font-size: 11px; padding: 5px 12px; }
   body.touch #overlay .box, body.touch #shop-overlay .box, body.touch #mission-overlay .box {
     min-width: 0; max-width: 94vw; padding: 20px 22px;
   }
   body.touch #overlay h1 { font-size: 34px; }
   body.touch #overlay p, body.touch #mission-overlay .m-brief { font-size: 11px; }
   body.touch #mission-overlay .box { max-height: 90vh; overflow-y: auto; }
+  /* Very short landscape phones — shrink the in-flight HUD further */
+  @media (max-height: 400px) {
+    body.touch #top-left, body.touch #top-right, body.touch #mission-hud { font-size: 9px; }
+    body.touch .bar { width: 56px; height: 7px; }
+    body.touch #radar { width: 86px; height: 86px; }
+    body.touch #mission-progress { font-size: 11px; }
+    body.touch #toasts { top: 58px; }
+  }
   @media (max-height: 430px) {
     #overlay .box, #shop-overlay .box, #mission-overlay .box { padding: 14px 20px; }
     #overlay h1 { font-size: 26px; margin-bottom: 6px; }
@@ -2072,7 +2090,12 @@ function updateTouchUI() {
   const playing = isTouchPlaying();
   touchUI.classList.toggle('live', playing);
   if (!playing && touchUI._clear) touchUI._clear();
-  if (tbWeaponEl && tbWeaponEl.firstChild) tbWeaponEl.firstChild.nodeValue = WEAPONS[player.weapon].name;
+  // Weapon button doubles as the readout — shows missile ammo when armed,
+  // since the bottom-left WPN/MSL panel is hidden on mobile.
+  if (tbWeaponEl && tbWeaponEl.firstChild) {
+    const w = WEAPONS[player.weapon];
+    tbWeaponEl.firstChild.nodeValue = w.isMissile ? `MSL ${player.missileAmmo}` : w.name;
+  }
 }
 
 // ====== GAME STATE ======
