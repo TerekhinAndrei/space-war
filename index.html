@@ -153,20 +153,21 @@
     from { opacity: 0; transform: translateY(-12px); }
     to   { opacity: 1; transform: translateY(0); }
   }
-  #shop-overlay, #mission-overlay, #settings-overlay {
+  #shop-overlay, #mission-overlay, #settings-overlay, #help-overlay {
     position: absolute; inset: 0; background: rgba(0, 0, 0, 0.92);
     display: none; align-items: center; justify-content: center;
     z-index: 12; color: #00ff66; font-family: 'Courier New', monospace;
     text-shadow: 0 0 8px #00ff66;
   }
   #mission-overlay { z-index: 11; }
-  #settings-overlay { z-index: 13; }
-  #settings-overlay .box {
+  #settings-overlay, #help-overlay { z-index: 13; }
+  #settings-overlay .box, #help-overlay .box {
     border: 1px solid #00ff66; padding: 32px 44px;
-    box-shadow: 0 0 30px rgba(0,255,102,0.35); min-width: 440px;
+    box-shadow: 0 0 30px rgba(0,255,102,0.35); min-width: 440px; max-width: 640px;
   }
-  #settings-overlay h1 { font-size: 44px; letter-spacing: 7px; margin-bottom: 6px; }
-  #settings-overlay h2 { font-size: 13px; letter-spacing: 3px; margin-bottom: 22px; opacity: 0.7; }
+  #settings-overlay h1, #help-overlay h1 { font-size: 44px; letter-spacing: 7px; margin-bottom: 6px; }
+  #settings-overlay h2, #help-overlay h2 { font-size: 13px; letter-spacing: 3px; margin-bottom: 22px; opacity: 0.7; }
+  #help-overlay p { font-size: 13px; line-height: 1.85; margin: 3px 0; }
   .set-row {
     display: flex; align-items: center; justify-content: space-between;
     gap: 24px; padding: 12px 14px; border: 1px solid #00ff66; margin: 7px 0;
@@ -340,12 +341,14 @@
   /* Toasts move to the free left strip below the bars — clear of mission-hud */
   body.touch #toasts { top: 66px; left: 10px; transform: none; align-items: flex-start; }
   body.touch .toast { font-size: 11px; padding: 5px 12px; }
-  body.touch #overlay .box, body.touch #shop-overlay .box, body.touch #mission-overlay .box {
+  body.touch #overlay .box, body.touch #shop-overlay .box, body.touch #mission-overlay .box,
+  body.touch #settings-overlay .box, body.touch #help-overlay .box {
     min-width: 0; max-width: 94vw; padding: 18px 22px;
   }
-  body.touch #overlay h1, body.touch #mission-overlay h1, body.touch #shop-overlay h1 { font-size: 32px; }
-  body.touch #overlay p, body.touch #mission-overlay .m-brief { font-size: 11px; }
-  body.touch #mission-overlay .box { max-height: 92vh; overflow-y: auto; }
+  body.touch #overlay h1, body.touch #mission-overlay h1, body.touch #shop-overlay h1,
+  body.touch #settings-overlay h1, body.touch #help-overlay h1 { font-size: 32px; }
+  body.touch #overlay p, body.touch #mission-overlay .m-brief, body.touch #help-overlay p { font-size: 11px; }
+  body.touch #mission-overlay .box, body.touch #help-overlay .box { max-height: 92vh; overflow-y: auto; }
   /* Control-hint blocks: show only the relevant input scheme */
   .help-touch { display: none; }
   body.touch .help-desktop { display: none; }
@@ -361,13 +364,13 @@
   /* Short overlays (landscape phones) — selectors carry body.touch so they
      out-specify the base body.touch overlay rules above. */
   @media (max-height: 440px) {
-    body.touch #overlay .box, body.touch #shop-overlay .box,
-    body.touch #mission-overlay .box { padding: 12px 22px; }
-    body.touch #overlay h1, body.touch #mission-overlay h1,
-    body.touch #shop-overlay h1 { font-size: 22px; letter-spacing: 4px; margin-bottom: 4px; }
-    body.touch #overlay h2, body.touch #mission-overlay h2,
-    body.touch #shop-overlay h2 { margin-bottom: 8px; font-size: 10px; }
-    body.touch #overlay p { margin: 1px 0; line-height: 1.5; }
+    body.touch #overlay .box, body.touch #shop-overlay .box, body.touch #mission-overlay .box,
+    body.touch #settings-overlay .box, body.touch #help-overlay .box { padding: 12px 22px; }
+    body.touch #overlay h1, body.touch #mission-overlay h1, body.touch #shop-overlay h1,
+    body.touch #settings-overlay h1, body.touch #help-overlay h1 { font-size: 22px; letter-spacing: 4px; margin-bottom: 4px; }
+    body.touch #overlay h2, body.touch #mission-overlay h2, body.touch #shop-overlay h2,
+    body.touch #settings-overlay h2, body.touch #help-overlay h2 { margin-bottom: 8px; font-size: 10px; }
+    body.touch #overlay p, body.touch #help-overlay p { margin: 1px 0; line-height: 1.5; }
     body.touch #overlay .start { margin-top: 10px; }
     body.touch #mission-list { gap: 5px; margin: 8px 0; }
     body.touch .mission-row { padding: 7px 12px; }
@@ -488,28 +491,11 @@
   <div class="box">
     <h1>SPACE WAR</h1>
     <h2>RETRO 3D COMBAT SIMULATOR</h2>
-    <!-- Keyboard / mouse instructions — desktop only -->
-    <div class="help-desktop">
-      <p>Mouse — aim (yaw / pitch)</p>
-      <p><span class="key">LMB</span> or <span class="key">SPACE</span> — fire</p>
-      <p><span class="key">W</span> <span class="key">S</span> — thrust forward / back</p>
-      <p><span class="key">A</span> <span class="key">D</span> — strafe left / right</p>
-      <p><span class="key">Q</span> <span class="key">E</span> — roll left / right</p>
-      <p><span class="key">1</span> laser · <span class="key">2</span> pulse · <span class="key">3</span> missiles (needs lock)</p>
-      <p><span class="key">TAB</span> — power distribution · <span class="key">B</span> — upgrade shop</p>
-      <p><span class="key">M</span> — sound · <span class="key">SHIFT</span> boost · <span class="key">X</span> stop · <span class="key">ESC</span> pause</p>
-    </div>
-    <!-- Touch instructions — mobile only -->
-    <div class="help-touch">
-      <p>Left stick — steer · Right stick — thrust &amp; strafe</p>
-      <p><span class="key">FIRE</span> auto-fire toggle · <span class="key">BOOST</span> · <span class="key">WPN</span> switch</p>
-      <p>Tap <span class="key">II</span> to pause</p>
-    </div>
-    <p style="opacity:0.85">Collect crystals dropped by enemies · dock at the station to fully repair</p>
     <div class="menu-btns">
       <div class="menu-btn primary" id="mb-missions">▶ MISSIONS</div>
       <div class="menu-btn" id="mb-shop">⬆ UPGRADE BAY</div>
       <div class="menu-btn" id="mb-settings">⚙ SETTINGS</div>
+      <div class="menu-btn" id="mb-help">? HOW TO PLAY</div>
     </div>
     <p style="opacity:0.85">HI: <span id="title-hiscore">0</span> · CREDITS: <span id="title-credits">0</span></p>
   </div>
@@ -522,6 +508,34 @@
     <div id="settings-list"></div>
     <div class="menu-btns" style="margin-top:14px">
       <div class="menu-btn" id="mb-settings-back">◀ BACK</div>
+    </div>
+  </div>
+</div>
+
+<div id="help-overlay">
+  <div class="box">
+    <h1>HOW TO PLAY</h1>
+    <h2>CONTROLS &amp; FIELD MANUAL</h2>
+    <!-- Keyboard / mouse — desktop only -->
+    <div class="help-desktop">
+      <p>Mouse — aim (yaw / pitch) · <span class="key">LMB</span> or <span class="key">SPACE</span> — fire</p>
+      <p><span class="key">W</span> <span class="key">S</span> — thrust · <span class="key">A</span> <span class="key">D</span> — strafe · <span class="key">Q</span> <span class="key">E</span> — roll</p>
+      <p><span class="key">1</span> laser · <span class="key">2</span> pulse · <span class="key">3</span> missiles (needs target lock)</p>
+      <p><span class="key">SHIFT</span> boost · <span class="key">X</span> brake · <span class="key">TAB</span> power distribution</p>
+      <p><span class="key">B</span> upgrade shop · <span class="key">M</span> sound · <span class="key">ESC</span> pause</p>
+    </div>
+    <!-- Touch — mobile only -->
+    <div class="help-touch">
+      <p>Left stick — steer (yaw / pitch)</p>
+      <p>Right stick — thrust forward·back &amp; strafe</p>
+      <p><span class="key">FIRE</span> auto-fire toggle · <span class="key">BOOST</span> · <span class="key">WPN</span> switch weapon</p>
+      <p>Tap <span class="key">II</span> to pause</p>
+    </div>
+    <p style="opacity:0.85;margin-top:12px">Crystals dropped by enemies restore hull, shield, energy &amp; missiles.</p>
+    <p style="opacity:0.85">Fly slowly into the station to dock — a full free repair &amp; rearm.</p>
+    <p style="opacity:0.85">The upgrade shop spends credits on permanent ship upgrades.</p>
+    <div class="menu-btns" style="margin-top:14px">
+      <div class="menu-btn" id="mb-help-back">◀ BACK</div>
     </div>
   </div>
 </div>
@@ -1445,6 +1459,14 @@ function showSettings() {
 function closeSettings() {
   document.getElementById('settings-overlay').style.display = 'none';
 }
+// HOW TO PLAY — controls + field manual, same top-layer pattern.
+function showHelp() {
+  document.getElementById('help-overlay').style.display = 'flex';
+  if (document.pointerLockElement) document.exitPointerLock();
+}
+function closeHelp() {
+  document.getElementById('help-overlay').style.display = 'none';
+}
 function renderSettings() {
   const list = document.getElementById('settings-list');
   list.innerHTML = '';
@@ -1487,6 +1509,8 @@ document.getElementById('mb-settings-back').addEventListener('click', e => { e.s
 document.getElementById('mb-ms-shop').addEventListener('click', e => { e.stopPropagation(); openShop(); });
 document.getElementById('mb-ms-settings').addEventListener('click', e => { e.stopPropagation(); showSettings(); });
 document.getElementById('mb-shop-close').addEventListener('click', e => { e.stopPropagation(); closeShop(); });
+document.getElementById('mb-help').addEventListener('click', e => { e.stopPropagation(); showHelp(); });
+document.getElementById('mb-help-back').addEventListener('click', e => { e.stopPropagation(); closeHelp(); });
 function renderShop() {
   document.getElementById('shop-credits').textContent = save.credits;
   const list = document.getElementById('shop-list');
@@ -2116,6 +2140,7 @@ addEventListener('keydown', e => {
   keys[e.code] = true;
   if (CAPTURED_KEYS.has(e.code)) e.preventDefault();
   if (e.code === 'Escape') {
+    if (document.getElementById('help-overlay').style.display === 'flex') { closeHelp(); return; }
     if (document.getElementById('settings-overlay').style.display === 'flex') { closeSettings(); return; }
     if (document.getElementById('shop-overlay').style.display === 'flex') { closeShop(); return; }
     if (started && player.hull > 0 && !paused) pauseGame();
@@ -2680,27 +2705,18 @@ function pauseGame() {
   silenceEngine();
   overlay.style.display = 'flex';
   const obj = mission.def ? mission.def.name : '';
-  const controls = IS_TOUCH ? `
-    <p style="margin-top:14px">Left stick — steer · Right stick — thrust &amp; strafe</p>
-    <p><span class="key">FIRE</span> auto-fire · <span class="key">BOOST</span> · <span class="key">WPN</span> switch</p>
-  ` : `
-    <p style="margin-top:14px">Controls:</p>
-    <p>Mouse — aim · <span class="key">LMB</span>/<span class="key">SPACE</span> fire</p>
-    <p><span class="key">W</span><span class="key">S</span> thrust · <span class="key">A</span><span class="key">D</span> strafe · <span class="key">Q</span><span class="key">E</span> roll</p>
-    <p><span class="key">1</span><span class="key">2</span><span class="key">3</span> weapons · <span class="key">TAB</span> power · <span class="key">B</span> shop · <span class="key">M</span> sound</p>
-    <p><span class="key">SHIFT</span> boost · <span class="key">X</span> stop</p>
-  `;
   overlayBox.innerHTML = `
     <h1>PAUSED</h1>
     <h2>${obj}</h2>
-    <p>SCORE: ${score} · KILLS: ${kills} · WAVE: ${wave}</p>
-    ${controls}
-    <div class="menu-btns" style="margin-top:16px">
+    <p style="opacity:0.85">SCORE: ${score} · KILLS: ${kills} · WAVE: ${wave}</p>
+    <div class="menu-btns" style="margin-top:18px">
       <div class="menu-btn primary" id="mb-resume">▶ RESUME</div>
+      <div class="menu-btn" id="mb-pause-help">? HOW TO PLAY</div>
       <div class="menu-btn" id="mb-pause-settings">⚙ SETTINGS</div>
     </div>
   `;
   document.getElementById('mb-resume').addEventListener('click', e => { e.stopPropagation(); resumeGame(); });
+  document.getElementById('mb-pause-help').addEventListener('click', e => { e.stopPropagation(); showHelp(); });
   document.getElementById('mb-pause-settings').addEventListener('click', e => { e.stopPropagation(); showSettings(); });
 }
 
