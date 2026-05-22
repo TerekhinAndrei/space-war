@@ -153,13 +153,46 @@
     from { opacity: 0; transform: translateY(-12px); }
     to   { opacity: 1; transform: translateY(0); }
   }
-  #shop-overlay, #mission-overlay {
+  #shop-overlay, #mission-overlay, #settings-overlay {
     position: absolute; inset: 0; background: rgba(0, 0, 0, 0.92);
     display: none; align-items: center; justify-content: center;
     z-index: 12; color: #00ff66; font-family: 'Courier New', monospace;
     text-shadow: 0 0 8px #00ff66;
   }
   #mission-overlay { z-index: 11; }
+  #settings-overlay { z-index: 13; }
+  #settings-overlay .box {
+    border: 1px solid #00ff66; padding: 32px 44px;
+    box-shadow: 0 0 30px rgba(0,255,102,0.35); min-width: 440px;
+  }
+  #settings-overlay h1 { font-size: 44px; letter-spacing: 7px; margin-bottom: 6px; }
+  #settings-overlay h2 { font-size: 13px; letter-spacing: 3px; margin-bottom: 22px; opacity: 0.7; }
+  .set-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 24px; padding: 12px 14px; border: 1px solid #00ff66; margin: 7px 0;
+  }
+  .set-row .set-label { font-weight: bold; letter-spacing: 2px; }
+  .set-opts { display: flex; gap: 6px; pointer-events: auto; }
+  .set-opt {
+    padding: 6px 12px; border: 1px solid #00ff66; cursor: pointer;
+    font-family: 'Courier New', monospace; color: #00ff66;
+    background: rgba(0,30,10,0.4); text-shadow: 0 0 6px #00ff66;
+    font-size: 12px; transition: all 0.1s;
+  }
+  .set-opt:hover { background: rgba(0,255,102,0.15); }
+  .set-opt.sel { background: rgba(0,255,102,0.32); box-shadow: 0 0 12px rgba(0,255,102,0.5); }
+  /* Start-menu buttons */
+  .menu-btns { display: flex; flex-direction: column; gap: 10px; margin: 22px auto 6px; max-width: 300px; }
+  .menu-btn {
+    pointer-events: auto; cursor: pointer;
+    padding: 12px 20px; border: 1px solid #00ff66;
+    background: rgba(0,30,10,0.4); color: #00ff66;
+    font-family: 'Courier New', monospace; font-size: 16px;
+    letter-spacing: 3px; text-shadow: 0 0 8px #00ff66;
+    transition: all 0.12s;
+  }
+  .menu-btn:hover { background: rgba(0,255,102,0.2); box-shadow: 0 0 16px rgba(0,255,102,0.5); }
+  .menu-btn.primary { border-color: #00ff88; box-shadow: 0 0 14px rgba(0,255,136,0.35); }
   #mission-overlay .box {
     border: 1px solid #00ff66; padding: 32px 44px;
     box-shadow: 0 0 30px rgba(0,255,102,0.35);
@@ -433,7 +466,8 @@
     <h2>PERMANENT SHIP UPGRADES</h2>
     <p>Credits: <span id="shop-credits">0</span></p>
     <div id="shop-list"></div>
-    <p class="shop-hint"><span class="key">B</span> or <span class="key">ESC</span> — close · upgrades persist between runs</p>
+    <p class="shop-hint">Upgrades persist between runs</p>
+    <div class="menu-btns" style="margin-top:6px"><div class="menu-btn" id="mb-shop-close">◀ CLOSE</div></div>
   </div>
 </div>
 
@@ -443,6 +477,10 @@
     <h2>SECTOR COMMAND · CHOOSE AN OPERATION</h2>
     <div id="mission-list"></div>
     <p class="shop-hint" id="mission-stats">HI: 0 · CREDITS: 0</p>
+    <div class="menu-btns" style="flex-direction:row;justify-content:center;max-width:none">
+      <div class="menu-btn" id="mb-ms-shop">⬆ UPGRADE BAY</div>
+      <div class="menu-btn" id="mb-ms-settings">⚙ SETTINGS</div>
+    </div>
   </div>
 </div>
 
@@ -468,8 +506,23 @@
       <p>Tap <span class="key">II</span> to pause</p>
     </div>
     <p style="opacity:0.85">Collect crystals dropped by enemies · dock at the station to fully repair</p>
-    <p style="margin-top:14px;opacity:0.85">HI: <span id="title-hiscore">0</span> · CREDITS: <span id="title-credits">0</span></p>
-    <p class="start">▶ CLICK — SELECT MISSION</p>
+    <div class="menu-btns">
+      <div class="menu-btn primary" id="mb-missions">▶ MISSIONS</div>
+      <div class="menu-btn" id="mb-shop">⬆ UPGRADE BAY</div>
+      <div class="menu-btn" id="mb-settings">⚙ SETTINGS</div>
+    </div>
+    <p style="opacity:0.85">HI: <span id="title-hiscore">0</span> · CREDITS: <span id="title-credits">0</span></p>
+  </div>
+</div>
+
+<div id="settings-overlay">
+  <div class="box">
+    <h1>SETTINGS</h1>
+    <h2>GRAPHICS · SOUND · CONTROL</h2>
+    <div id="settings-list"></div>
+    <div class="menu-btns" style="margin-top:14px">
+      <div class="menu-btn" id="mb-settings-back">◀ BACK</div>
+    </div>
   </div>
 </div>
 
@@ -513,6 +566,23 @@ const bloomPass = new UnrealBloomPass(
   0.74    // threshold — high, so wireframe edges stay crisp and only
 );        // bullets / engine glow / explosions / pickups bloom
 composer.addPass(bloomPass);
+
+// ====== GRAPHICS QUALITY ======
+// Player-chosen, never automatic. HIGH = sharp + bloom, MEDIUM = default,
+// LOW = pixelRatio 1 and no bloom (composer bypassed). Driven by the
+// Settings menu; applyGraphics() is the single point that acts on it.
+let useBloom = true;
+const GRAPHICS_PRESETS = {
+  high:   { ratio: 2,   bloom: true  },
+  medium: { ratio: 1.5, bloom: true  },
+  low:    { ratio: 1,   bloom: false },
+};
+function applyGraphics() {
+  const p = GRAPHICS_PRESETS[save.settings.graphics] || GRAPHICS_PRESETS.medium;
+  renderer.setPixelRatio(Math.min(devicePixelRatio, p.ratio));
+  composer.setSize(innerWidth, innerHeight);
+  useBloom = p.bloom;
+}
 
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
@@ -1215,7 +1285,7 @@ const DEFAULT_SAVE = {
   unlocked: [],
   missionsCleared: [],   // ids of campaign missions completed
   campaignDone: false,   // finale beaten at least once
-  settings: { mute: false, sensitivity: 1.0 },
+  settings: { mute: false, sensitivity: 1.0, graphics: 'medium' },
 };
 let save = JSON.parse(JSON.stringify(DEFAULT_SAVE));
 try {
@@ -1230,6 +1300,7 @@ try {
     save.campaignDone = !!parsed.campaignDone;
   }
 } catch {}
+applyGraphics();   // act on the saved graphics preset now that `save` exists
 function persistSave() {
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch {}
 }
@@ -1349,25 +1420,73 @@ function onWaveComplete() {
 }
 
 // ====== SHOP UI ======
+// The shop is a top layer (z-index 12) — it doesn't hide the menu behind
+// it, so closing it just reveals that menu. If opened mid-flight it first
+// pauses (so the pause screen becomes the backdrop).
 function openShop() {
-  if (started && !paused && player.hull > 0) {
-    paused = true;
-    silenceEngine();
-    mouse.down = false;
-  }
-  overlay.style.display = 'none';
+  if (started && !paused && player.hull > 0) pauseGame();
   document.getElementById('shop-overlay').style.display = 'flex';
   if (document.pointerLockElement) document.exitPointerLock();
   renderShop();
 }
 function closeShop() {
   document.getElementById('shop-overlay').style.display = 'none';
-  if (!started || player.hull <= 0) {
-    overlay.style.display = 'flex';
-  } else if (paused) {
-    pauseGame();
+}
+
+// ====== SETTINGS UI ======
+// A top-layer overlay (z-index 13) — opens over whatever menu is showing
+// and closing it simply reveals that menu again. Reachable from the start
+// menu, the mission-select screen and the pause menu.
+function showSettings() {
+  document.getElementById('settings-overlay').style.display = 'flex';
+  if (document.pointerLockElement) document.exitPointerLock();
+  renderSettings();
+}
+function closeSettings() {
+  document.getElementById('settings-overlay').style.display = 'none';
+}
+function renderSettings() {
+  const list = document.getElementById('settings-list');
+  list.innerHTML = '';
+  const rows = [
+    { label: 'GRAPHICS', cur: save.settings.graphics,
+      opts: [['HIGH','high'],['MEDIUM','medium'],['LOW','low']],
+      apply: v => { save.settings.graphics = v; applyGraphics(); } },
+    { label: 'SOUND', cur: save.settings.mute,
+      opts: [['ON',false],['OFF',true]],
+      apply: v => setMuted(v) },
+    { label: 'SENSITIVITY', cur: save.settings.sensitivity,
+      opts: [['0.5×',0.5],['0.75×',0.75],['1.0×',1],['1.5×',1.5],['2.0×',2]],
+      apply: v => { save.settings.sensitivity = v; } },
+  ];
+  for (const r of rows) {
+    const row = document.createElement('div');
+    row.className = 'set-row';
+    const label = document.createElement('div');
+    label.className = 'set-label';
+    label.textContent = r.label;
+    const opts = document.createElement('div');
+    opts.className = 'set-opts';
+    for (const [txt, val] of r.opts) {
+      const o = document.createElement('div');
+      o.className = 'set-opt' + (val === r.cur ? ' sel' : '');
+      o.textContent = txt;
+      o.addEventListener('click', () => { r.apply(val); persistSave(); renderSettings(); });
+      opts.appendChild(o);
+    }
+    row.appendChild(label);
+    row.appendChild(opts);
+    list.appendChild(row);
   }
 }
+// Wire the menu buttons (all static HTML, present at load).
+document.getElementById('mb-missions').addEventListener('click', e => { e.stopPropagation(); showMissionSelect(); });
+document.getElementById('mb-shop').addEventListener('click', e => { e.stopPropagation(); openShop(); });
+document.getElementById('mb-settings').addEventListener('click', e => { e.stopPropagation(); showSettings(); });
+document.getElementById('mb-settings-back').addEventListener('click', e => { e.stopPropagation(); closeSettings(); });
+document.getElementById('mb-ms-shop').addEventListener('click', e => { e.stopPropagation(); openShop(); });
+document.getElementById('mb-ms-settings').addEventListener('click', e => { e.stopPropagation(); showSettings(); });
+document.getElementById('mb-shop-close').addEventListener('click', e => { e.stopPropagation(); closeShop(); });
 function renderShop() {
   document.getElementById('shop-credits').textContent = save.credits;
   const list = document.getElementById('shop-list');
@@ -1997,8 +2116,8 @@ addEventListener('keydown', e => {
   keys[e.code] = true;
   if (CAPTURED_KEYS.has(e.code)) e.preventDefault();
   if (e.code === 'Escape') {
-    const shopOpen = document.getElementById('shop-overlay').style.display === 'flex';
-    if (shopOpen) { closeShop(); return; }
+    if (document.getElementById('settings-overlay').style.display === 'flex') { closeSettings(); return; }
+    if (document.getElementById('shop-overlay').style.display === 'flex') { closeShop(); return; }
     if (started && player.hull > 0 && !paused) pauseGame();
   }
   if (e.code === 'Digit1') player.weapon = 0;
@@ -2059,8 +2178,8 @@ function isTouchPlaying() {
 
 if (IS_TOUCH) {
   document.body.classList.add('touch');
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5)); // ease load on mobile GPUs
-  composer.setSize(innerWidth, innerHeight);               // re-fit render targets to new ratio
+  // Render resolution is governed by the Settings graphics preset
+  // (applyGraphics) — mobile players can pick LOW if they need it.
   touch.fire = true;                                       // auto-fire on by default
   document.getElementById('tb-fire').classList.add('pressed');
 
@@ -2576,8 +2695,13 @@ function pauseGame() {
     <h2>${obj}</h2>
     <p>SCORE: ${score} · KILLS: ${kills} · WAVE: ${wave}</p>
     ${controls}
-    <p class="start">▶ CLICK TO RESUME</p>
+    <div class="menu-btns" style="margin-top:16px">
+      <div class="menu-btn primary" id="mb-resume">▶ RESUME</div>
+      <div class="menu-btn" id="mb-pause-settings">⚙ SETTINGS</div>
+    </div>
   `;
+  document.getElementById('mb-resume').addEventListener('click', e => { e.stopPropagation(); resumeGame(); });
+  document.getElementById('mb-pause-settings').addEventListener('click', e => { e.stopPropagation(); showSettings(); });
 }
 
 function resumeGame() {
@@ -2589,11 +2713,10 @@ function resumeGame() {
 }
 
 overlay.addEventListener('click', () => {
-  if (overlayMode === 'title' || overlayMode === 'missionend') {
-    showMissionSelect();
-  } else if (overlayMode === 'pause') {
-    resumeGame();
-  }
+  // Title menu uses explicit buttons; mission-end is click-anywhere;
+  // pause resumes on a background click (its buttons stopPropagation).
+  if (overlayMode === 'missionend') showMissionSelect();
+  else if (overlayMode === 'pause') resumeGame();
 });
 
 // ====== CAMERA SHAKE ======
@@ -3463,26 +3586,6 @@ function updateRadar() {
 }
 
 // ====== MAIN LOOP ======
-// Adaptive quality: if the framerate stays low, step down rendering cost
-// so the game runs smoothly on weaker GPUs without the player touching
-// anything. Level 0 = pixelRatio 1.5 + bloom, 1 = pixelRatio 1 + bloom,
-// 2 = pixelRatio 1, no bloom. One-directional (only degrades — no churn).
-let qualityLevel = 0;
-let useBloom = true;
-let lowFpsTime = 0;
-function degradeQuality() {
-  if (qualityLevel === 0) {
-    qualityLevel = 1;
-    renderer.setPixelRatio(1);
-    composer.setSize(innerWidth, innerHeight);
-    showToast('GRAPHICS ↓ — RESOLUTION', '#ffaa22');
-  } else if (qualityLevel === 1) {
-    qualityLevel = 2;
-    useBloom = false;
-    showToast('GRAPHICS ↓ — BLOOM OFF', '#ffaa22');
-  }
-}
-
 let fpsAccum = 0, fpsFrames = 0;
 function animate() {
   const raw = clock.getDelta();          // real delta (unclamped) for FPS
@@ -3492,11 +3595,6 @@ function animate() {
     const fps = Math.round(fpsFrames / fpsAccum);
     fpsEl.textContent = fps;
     fpsEl.style.color = fps >= 50 ? '#00ff66' : fps >= 30 ? '#ffaa22' : '#ff3344';
-    // Sustained sub-45 FPS during play → drop a quality notch.
-    if (started && !paused && player.hull > 0 && qualityLevel < 2) {
-      lowFpsTime = fps < 45 ? lowFpsTime + fpsAccum : 0;
-      if (lowFpsTime > 3) { degradeQuality(); lowFpsTime = 0; }
-    }
     fpsAccum = 0; fpsFrames = 0;
   }
   if (started && !paused && player.hull > 0) {
