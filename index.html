@@ -2,6 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#000008">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <title>SPACE WAR — Retro 3D Combat Simulator</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -200,6 +204,86 @@
     filter: drop-shadow(0 0 4px #ff3344);
     transform-origin: center;
   }
+
+  /* ===== TOUCH / MOBILE UI ===== */
+  #touch-ui { position: absolute; inset: 0; display: none; z-index: 6;
+    touch-action: none; -webkit-user-select: none; user-select: none; }
+  body.touch #touch-ui.live { display: block; }
+  .stick {
+    position: absolute; width: 132px; height: 132px; margin: -66px 0 0 -66px;
+    border: 1.5px solid rgba(0,255,102,0.5); border-radius: 50%;
+    background: rgba(0,30,10,0.25);
+    box-shadow: 0 0 16px rgba(0,255,102,0.25), inset 0 0 16px rgba(0,255,102,0.08);
+    display: none; pointer-events: none;
+  }
+  .stick.active { display: block; }
+  .stick .knob {
+    position: absolute; width: 58px; height: 58px; left: 37px; top: 37px;
+    border: 1.5px solid #00ff66; border-radius: 50%;
+    background: rgba(0,255,102,0.18);
+    box-shadow: 0 0 14px rgba(0,255,102,0.45);
+  }
+  .stick .lbl {
+    position: absolute; left: 0; right: 0; top: -22px; text-align: center;
+    font-size: 9px; letter-spacing: 2px; color: #00ff66; opacity: 0.7;
+  }
+  .tbtn {
+    position: absolute; pointer-events: auto;
+    border: 1.5px solid #00ff66; background: rgba(0,30,10,0.5);
+    color: #00ff66; text-shadow: 0 0 6px #00ff66;
+    font-family: 'Courier New', monospace; font-weight: bold;
+    border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 12px rgba(0,255,102,0.25);
+    flex-direction: column; line-height: 1.2;
+  }
+  .tbtn.pressed { background: rgba(0,255,102,0.3); box-shadow: 0 0 18px rgba(0,255,102,0.6); }
+  .tbtn small { font-size: 8px; opacity: 0.65; letter-spacing: 1px; }
+  #tb-fire   { right: 22px; bottom: 116px; width: 96px; height: 96px;
+    border-radius: 50%; font-size: 15px; border-color: #ff6644; color: #ff6644;
+    text-shadow: 0 0 6px #ff6644; box-shadow: 0 0 14px rgba(255,102,68,0.35); }
+  #tb-fire.pressed { background: rgba(255,102,68,0.32); }
+  #tb-boost  { right: 132px; bottom: 130px; width: 70px; height: 70px;
+    border-radius: 50%; font-size: 12px; }
+  #tb-weapon { right: 24px; bottom: 224px; width: 92px; height: 46px; font-size: 13px; }
+  #tb-pause  { right: 16px; top: 14px; width: 46px; height: 46px; font-size: 18px; }
+
+  /* Orientation gate — space combat needs landscape */
+  #orient-warning {
+    position: absolute; inset: 0; z-index: 30; display: none;
+    background: #000008; color: #00ff66; font-family: 'Courier New', monospace;
+    align-items: center; justify-content: center; text-align: center;
+    text-shadow: 0 0 8px #00ff66;
+  }
+  #orient-warning .rot { font-size: 52px; margin-bottom: 18px; animation: rothint 2s infinite; }
+  #orient-warning p { font-size: 14px; letter-spacing: 2px; }
+  @keyframes rothint { 0%,100%{transform:rotate(0)} 50%{transform:rotate(90deg)} }
+  body.touch.portrait #orient-warning { display: flex; }
+
+  /* ===== RESPONSIVE / MOBILE LAYOUT ===== */
+  body.touch #bottom-right { display: none; }      /* X/Y/Z not useful on mobile */
+  body.touch #crosshair { width: 48px; height: 48px; }
+  body.touch .panel { font-size: 10px; padding: 5px 8px; }
+  body.touch #top-left  { top: 8px; left: 8px; min-width: 0; }
+  body.touch #top-right { top: 8px; right: 70px; min-width: 0; }
+  body.touch #bottom-left { bottom: auto; top: 128px; left: 8px; }
+  body.touch .bar { width: 70px; }
+  body.touch #radar { width: 116px; height: 116px; bottom: 10px; }
+  body.touch #radar canvas { width: 100%; height: 100%; }
+  body.touch #mission-hud { top: 8px; min-width: 0; padding: 4px 10px; }
+  body.touch #mission-progress { font-size: 12px; }
+  body.touch #overlay .box, body.touch #shop-overlay .box, body.touch #mission-overlay .box {
+    min-width: 0; max-width: 94vw; padding: 20px 22px;
+  }
+  body.touch #overlay h1 { font-size: 34px; }
+  body.touch #overlay p, body.touch #mission-overlay .m-brief { font-size: 11px; }
+  body.touch #mission-overlay .box { max-height: 90vh; overflow-y: auto; }
+  @media (max-height: 430px) {
+    #overlay .box, #shop-overlay .box, #mission-overlay .box { padding: 14px 20px; }
+    #overlay h1 { font-size: 26px; margin-bottom: 6px; }
+    #overlay h2 { margin-bottom: 10px; }
+    #overlay p { margin: 2px 0; }
+    #overlay .start { margin-top: 12px; }
+  }
 </style>
 </head>
 <body>
@@ -262,6 +346,23 @@
   <div id="damage-flash"></div>
   <div id="critical-overlay"></div>
   <div id="toasts"></div>
+</div>
+
+<div id="touch-ui">
+  <div class="stick" id="stick-l"><div class="lbl">STEER</div><div class="knob"></div></div>
+  <div class="stick" id="stick-r"><div class="lbl">THRUST</div><div class="knob"></div></div>
+  <div class="tbtn" id="tb-fire">FIRE</div>
+  <div class="tbtn" id="tb-boost">BOOST</div>
+  <div class="tbtn" id="tb-weapon">LASER<small>tap = switch</small></div>
+  <div class="tbtn" id="tb-pause">II</div>
+</div>
+
+<div id="orient-warning">
+  <div>
+    <div class="rot">▭</div>
+    <p>ROTATE YOUR DEVICE</p>
+    <p style="opacity:0.6;margin-top:8px">SPACE WAR plays in landscape</p>
+  </div>
 </div>
 
 <div id="shop-overlay">
@@ -1822,8 +1923,8 @@ addEventListener('mousemove', e => {
   mouse.dx += e.movementX || 0;
   mouse.dy += e.movementY || 0;
 });
-addEventListener('mousedown', e => { if (e.button === 0) mouse.down = true; });
-addEventListener('mouseup',   e => { if (e.button === 0) mouse.down = false; });
+addEventListener('mousedown', e => { if (!IS_TOUCH && e.button === 0) mouse.down = true; });
+addEventListener('mouseup',   e => { if (!IS_TOUCH && e.button === 0) mouse.down = false; });
 
 document.addEventListener('pointerlockchange', () => {
   pointerLocked = document.pointerLockElement === renderer.domElement;
@@ -1836,8 +1937,132 @@ document.addEventListener('pointerlockchange', () => {
 });
 
 function requestLock() {
+  if (IS_TOUCH) return;   // pointer lock is desktop-only; mobile uses touch
   const p = renderer.domElement.requestPointerLock?.();
   if (p && typeof p.then === 'function') p.catch(() => {});
+}
+
+// ====== TOUCH / MOBILE CONTROLS ======
+// Twin virtual joysticks (steer + thrust) feed the same analog channels
+// the gamepad path uses; FIRE is a toggle (auto-fire) so two thumbs are
+// enough to play. Buttons cycle weapon, toggle boost, and pause.
+// Touch mode only when the device actually has touch AND a coarse primary
+// pointer — so touchscreen laptops (with a trackpad) stay in desktop mode.
+const IS_TOUCH = ((navigator.maxTouchPoints || 0) > 0 || 'ontouchstart' in window)
+  && window.matchMedia('(pointer: coarse)').matches;
+// fire defaults OFF so desktop is unaffected; mobile turns auto-fire on below.
+const touch = { aimX: 0, aimY: 0, thrust: 0, strafe: 0, fire: false, boost: false };
+const touchUI = document.getElementById('touch-ui');
+const tbWeaponEl = document.getElementById('tb-weapon');
+
+function isTouchPlaying() {
+  return IS_TOUCH && started && !paused && player.hull > 0;
+}
+
+if (IS_TOUCH) {
+  document.body.classList.add('touch');
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5)); // ease load on mobile GPUs
+  composer.setSize(innerWidth, innerHeight);               // re-fit render targets to new ratio
+  touch.fire = true;                                       // auto-fire on by default
+  document.getElementById('tb-fire').classList.add('pressed');
+
+  const stickL = document.getElementById('stick-l');
+  const stickR = document.getElementById('stick-r');
+  const knobL  = stickL.querySelector('.knob');
+  const knobR  = stickR.querySelector('.knob');
+  const BR = 66, RANGE = 50, KOFF = BR - 29;
+  const active = new Map(); // touch identifier -> { kind, baseX, baseY, btn }
+
+  function hitButton(x, y) {
+    for (const id of ['tb-fire','tb-boost','tb-weapon','tb-pause']) {
+      const r = document.getElementById(id).getBoundingClientRect();
+      if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return id;
+    }
+    return null;
+  }
+  function showStick(stick, knob, x, y) {
+    stick.style.left = x + 'px'; stick.style.top = y + 'px';
+    knob.style.left = KOFF + 'px'; knob.style.top = KOFF + 'px';
+    stick.classList.add('active');
+  }
+  function pressButton(id, down) {
+    const el = document.getElementById(id);
+    if (id === 'tb-fire') {
+      if (down) { touch.fire = !touch.fire; el.classList.toggle('pressed', touch.fire); }
+    } else if (id === 'tb-boost') {
+      if (down) { touch.boost = !touch.boost; el.classList.toggle('pressed', touch.boost); }
+    } else if (id === 'tb-weapon') {
+      if (down) player.weapon = (player.weapon + 1) % WEAPONS.length;
+    } else if (id === 'tb-pause') {
+      if (down && started && player.hull > 0 && !paused) pauseGame();
+    }
+  }
+
+  function onStart(e) {
+    if (!isTouchPlaying()) return;
+    for (const t of e.changedTouches) {
+      const x = t.clientX, y = t.clientY;
+      const btn = hitButton(x, y);
+      if (btn) { active.set(t.identifier, { kind: 'btn', btn }); pressButton(btn, true); continue; }
+      if (x < innerWidth * 0.5) {
+        active.set(t.identifier, { kind: 'L', baseX: x, baseY: y });
+        showStick(stickL, knobL, x, y);
+      } else {
+        active.set(t.identifier, { kind: 'R', baseX: x, baseY: y });
+        showStick(stickR, knobR, x, y);
+      }
+    }
+    e.preventDefault();
+  }
+  function onMove(e) {
+    for (const t of e.changedTouches) {
+      const rec = active.get(t.identifier);
+      if (!rec || rec.kind === 'btn') continue;
+      let dx = t.clientX - rec.baseX, dy = t.clientY - rec.baseY;
+      const len = Math.hypot(dx, dy);
+      if (len > RANGE) { dx = dx / len * RANGE; dy = dy / len * RANGE; }
+      if (rec.kind === 'L') {
+        knobL.style.left = (KOFF + dx) + 'px'; knobL.style.top = (KOFF + dy) + 'px';
+        touch.aimX = dx / RANGE; touch.aimY = dy / RANGE;
+      } else {
+        knobR.style.left = (KOFF + dx) + 'px'; knobR.style.top = (KOFF + dy) + 'px';
+        touch.strafe = dx / RANGE; touch.thrust = -dy / RANGE;
+      }
+    }
+    e.preventDefault();
+  }
+  function onEnd(e) {
+    for (const t of e.changedTouches) {
+      const rec = active.get(t.identifier);
+      if (!rec) continue;
+      active.delete(t.identifier);
+      if (rec.kind === 'btn') pressButton(rec.btn, false);
+      else if (rec.kind === 'L') { stickL.classList.remove('active'); touch.aimX = touch.aimY = 0; }
+      else if (rec.kind === 'R') { stickR.classList.remove('active'); touch.thrust = touch.strafe = 0; }
+    }
+    e.preventDefault();
+  }
+  touchUI.addEventListener('touchstart',  onStart, { passive: false });
+  touchUI.addEventListener('touchmove',   onMove,  { passive: false });
+  touchUI.addEventListener('touchend',    onEnd,   { passive: false });
+  touchUI.addEventListener('touchcancel', onEnd,   { passive: false });
+
+  touchUI._clear = () => {
+    active.clear();
+    stickL.classList.remove('active'); stickR.classList.remove('active');
+    touch.aimX = touch.aimY = touch.thrust = touch.strafe = 0;
+  };
+}
+
+function updateTouchUI() {
+  if (!IS_TOUCH) return;
+  document.body.classList.toggle('portrait', innerHeight > innerWidth);
+  // Going portrait mid-flight auto-pauses (the rotate gate covers the view).
+  if (innerHeight > innerWidth && started && !paused && player.hull > 0) pauseGame();
+  const playing = isTouchPlaying();
+  touchUI.classList.toggle('live', playing);
+  if (!playing && touchUI._clear) touchUI._clear();
+  if (tbWeaponEl && tbWeaponEl.firstChild) tbWeaponEl.firstChild.nodeValue = WEAPONS[player.weapon].name;
 }
 
 // ====== GAME STATE ======
@@ -2307,7 +2532,11 @@ function updatePlayer(dt) {
   if (kYaw)   player.obj.rotateY(kYaw   * rotSpeed * dt);
   if (kRoll)  player.obj.rotateZ(kRoll  * rotSpeed * dt);
 
-  // ---- THRUST (keyboard + gamepad) ----
+  // ---- TOUCH STEER (left virtual joystick) ----
+  if (touch.aimX) player.obj.rotateY(-touch.aimX * 2.4 * dt);
+  if (touch.aimY) player.obj.rotateX(-touch.aimY * 2.4 * dt);
+
+  // ---- THRUST (keyboard + gamepad + touch) ----
   accelVec.set(0, 0, 0);
   if (keys['KeyW']) accelVec.add(forwardVec);
   if (keys['KeyS']) accelVec.sub(forwardVec);
@@ -2315,8 +2544,10 @@ function updatePlayer(dt) {
   if (keys['KeyA']) accelVec.sub(rightVec);
   if (gpThrust) accelVec.addScaledVector(forwardVec, gpThrust);
   if (gpStrafe) accelVec.addScaledVector(rightVec, gpStrafe);
+  if (touch.thrust) accelVec.addScaledVector(forwardVec, touch.thrust);
+  if (touch.strafe) accelVec.addScaledVector(rightVec, touch.strafe);
 
-  const boosting = keys['ShiftLeft'] || keys['ShiftRight'] || gpBoost;
+  const boosting = keys['ShiftLeft'] || keys['ShiftRight'] || gpBoost || touch.boost;
   const boost = boosting ? 2.4 : 1;
   const accelMag = 70 * boost * player.speedMult;
   if (accelVec.lengthSq() > 0) {
@@ -2387,7 +2618,7 @@ function updatePlayer(dt) {
 
   // ---- FIRE (weapon dispatch + damage mult + power mode CD) ----
   player.fireCooldown -= dt;
-  const fireHeld = mouse.down || keys['Space'] || gpFire;
+  const fireHeld = mouse.down || keys['Space'] || gpFire || touch.fire;
   if (fireHeld && player.fireCooldown <= 0) {
     const w = WEAPONS[player.weapon];
     const dir = forwardVec.clone();
@@ -3057,6 +3288,7 @@ function animate() {
   updateRadar();
   updateLeadIndicator();
   updateOffScreenIndicators();
+  updateTouchUI();
   composer.render();
   requestAnimationFrame(animate);
 }
