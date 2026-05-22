@@ -18,13 +18,23 @@
   }
   .panel {
     position: absolute; padding: 8px 12px;
-    border: 1px solid #00ff66; background: rgba(0, 20, 0, 0.35);
+    border: 1px solid rgba(0, 255, 102, 0.55);
+    border-left: 3px solid #00ff66;
+    background: rgba(0, 20, 0, 0.35);
     box-shadow: 0 0 12px rgba(0, 255, 102, 0.2), inset 0 0 12px rgba(0, 255, 102, 0.1);
   }
-  #top-left { top: 16px; left: 16px; min-width: 200px; }
-  #top-right { top: 16px; right: 16px; text-align: right; min-width: 180px; }
-  #bottom-left { bottom: 16px; left: 16px; }
-  #bottom-right { bottom: 16px; right: 16px; }
+  /* Survival panel — emphasized: brighter, larger, the thing you check most */
+  #top-left {
+    top: 16px; left: 16px; min-width: 200px; font-size: 15px;
+    border-color: #00ff88; border-left-color: #00ff88;
+    box-shadow: 0 0 18px rgba(0, 255, 136, 0.4), inset 0 0 14px rgba(0, 255, 136, 0.12);
+  }
+  #top-right { top: 16px; right: 16px; text-align: right; min-width: 180px;
+    border-left-color: #ffcc44; }
+  #bottom-left { bottom: 16px; left: 16px; border-left-color: #66aaff; }
+  /* Coordinate readout — retro flavor, demoted out of the way */
+  #bottom-right { bottom: 16px; right: 16px; opacity: 0.55; font-size: 11px;
+    border-left-color: rgba(0, 255, 102, 0.5); }
   #radar {
     position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
     width: 180px; height: 180px; border: 1px solid #00ff66;
@@ -37,11 +47,18 @@
     width: 60px; height: 60px;
   }
   .bar {
-    display: inline-block; width: 120px; height: 8px;
+    display: inline-block; width: 120px; height: 11px;
     border: 1px solid #00ff66; vertical-align: middle; margin-left: 6px;
   }
-  .bar > div { height: 100%; background: #00ff66; box-shadow: 0 0 6px #00ff66; transition: width 0.15s; }
-  .bar.shield > div { background: #00aaff; box-shadow: 0 0 6px #00aaff; }
+  .bar > div {
+    height: 100%; background: #00ff66; box-shadow: 0 0 6px currentColor;
+    color: #00ff66; transition: width 0.15s, background 0.2s;
+  }
+  .bar.shield > div { background: #00aaff; color: #00aaff; }
+  /* Danger states are set on the hull bar from updateHUD() */
+  .bar > div.warn { background: #ffaa22; color: #ffaa22; }
+  .bar > div.crit { background: #ff3344; color: #ff3344; animation: barCrit 0.55s infinite; }
+  @keyframes barCrit { 50% { opacity: 0.35; } }
   #overlay {
     position: absolute; inset: 0; display: flex;
     align-items: center; justify-content: center;
@@ -54,10 +71,20 @@
     border: 1px solid #00ff66;
     box-shadow: 0 0 30px rgba(0, 255, 102, 0.4);
   }
-  #overlay h1 { font-size: 48px; letter-spacing: 8px; margin-bottom: 16px; }
-  #overlay h2 { font-size: 14px; letter-spacing: 3px; margin-bottom: 28px; opacity: 0.7; }
+  /* Corner brackets — give every overlay panel a designed targeting-frame
+     look instead of a plain rectangle. */
+  .box { position: relative; }
+  .box::before, .box::after {
+    content: ''; position: absolute; width: 20px; height: 20px;
+    pointer-events: none;
+  }
+  .box::before { top: -1px;  left: -1px;  border-top: 2px solid currentColor;  border-left: 2px solid currentColor; }
+  .box::after  { bottom: -1px; right: -1px; border-bottom: 2px solid currentColor; border-right: 2px solid currentColor; }
+  #overlay h1 { font-size: 44px; letter-spacing: 8px; margin-bottom: 14px; }
+  #overlay h2 { font-size: 14px; letter-spacing: 3px; margin-bottom: 26px; opacity: 0.7; }
   #overlay p { font-size: 13px; line-height: 1.8; margin: 4px 0; }
-  #overlay .start { margin-top: 28px; font-size: 16px; animation: blink 1s infinite; }
+  #overlay .box p:not(.start) { opacity: 0.85; }
+  #overlay .start { margin-top: 26px; font-size: 16px; opacity: 1 !important; animation: blink 1s infinite; }
   @keyframes blink { 50% { opacity: 0.2; } }
   .key { display: inline-block; padding: 1px 8px; border: 1px solid #00ff66; margin: 0 2px; font-size: 11px; }
   #damage-flash {
@@ -93,13 +120,13 @@
     overflow: hidden;
   }
   #cockpit-frame svg { width: 100%; height: 100%; display: block; }
-  #cockpit-frame path, #cockpit-frame line { stroke: #00ff66; stroke-width: 1.2; fill: none; opacity: 0.4; filter: drop-shadow(0 0 3px #00ff66); }
-  #cockpit-frame .dim { opacity: 0.18; }
+  #cockpit-frame path, #cockpit-frame line { stroke: #00ff66; stroke-width: 1.7; fill: none; opacity: 0.6; filter: drop-shadow(0 0 3px #00ff66); }
+  #cockpit-frame .dim { opacity: 0.3; }
   #cockpit-vignette {
     position: absolute; inset: 0; pointer-events: none;
     background:
-      radial-gradient(ellipse at center, transparent 55%, rgba(0, 20, 5, 0.55) 100%),
-      linear-gradient(180deg, rgba(0, 30, 10, 0.18) 0%, transparent 12%, transparent 88%, rgba(0, 30, 10, 0.22) 100%);
+      radial-gradient(ellipse at center, transparent 52%, rgba(0, 20, 5, 0.74) 100%),
+      linear-gradient(180deg, rgba(0, 30, 10, 0.28) 0%, transparent 13%, transparent 87%, rgba(0, 30, 10, 0.32) 100%);
   }
   #critical-overlay {
     position: absolute; inset: 0; pointer-events: none;
@@ -138,8 +165,8 @@
     box-shadow: 0 0 30px rgba(0,255,102,0.35);
     min-width: 560px; max-width: 640px;
   }
-  #mission-overlay h1 { font-size: 32px; letter-spacing: 6px; margin-bottom: 4px; }
-  #mission-overlay h2 { font-size: 12px; letter-spacing: 3px; margin-bottom: 20px; opacity: 0.7; }
+  #mission-overlay h1 { font-size: 44px; letter-spacing: 7px; margin-bottom: 6px; }
+  #mission-overlay h2 { font-size: 13px; letter-spacing: 3px; margin-bottom: 22px; opacity: 0.7; }
   #mission-list { display: flex; flex-direction: column; gap: 8px; margin: 16px 0; }
   .mission-row {
     padding: 12px 16px; border: 1px solid #00ff66;
@@ -171,8 +198,8 @@
     box-shadow: 0 0 30px rgba(0,255,102,0.35);
     min-width: 560px;
   }
-  #shop-overlay h1 { font-size: 32px; letter-spacing: 6px; margin-bottom: 4px; }
-  #shop-overlay h2 { font-size: 12px; letter-spacing: 3px; margin-bottom: 20px; opacity: 0.7; }
+  #shop-overlay h1 { font-size: 44px; letter-spacing: 7px; margin-bottom: 6px; }
+  #shop-overlay h2 { font-size: 13px; letter-spacing: 3px; margin-bottom: 22px; opacity: 0.7; }
   #shop-list { display: flex; flex-direction: column; gap: 6px; margin: 16px 0; }
   .shop-row {
     display: flex; align-items: center; gap: 16px;
@@ -193,15 +220,15 @@
   .shop-hint { margin-top: 16px; font-size: 12px; opacity: 0.6; }
   #lead {
     position: absolute; pointer-events: none;
-    opacity: 0; transform: translate(-50%, -50%);
-    filter: drop-shadow(0 0 4px #ffcc44);
+    opacity: 0; transform: translate(-50%, -50%) scale(1.25);
+    filter: drop-shadow(0 0 7px #ffcc44);
     transition: opacity 0.12s;
   }
-  #lead.active { opacity: 0.85; }
+  #lead.active { opacity: 1; }
   #off-screen { position: absolute; inset: 0; pointer-events: none; }
   .off-arrow {
     position: absolute; color: #ff3344;
-    filter: drop-shadow(0 0 4px #ff3344);
+    filter: drop-shadow(0 0 4px currentColor);
     transform-origin: center;
   }
 
@@ -284,7 +311,7 @@
   body.touch #overlay .box, body.touch #shop-overlay .box, body.touch #mission-overlay .box {
     min-width: 0; max-width: 94vw; padding: 20px 22px;
   }
-  body.touch #overlay h1 { font-size: 34px; }
+  body.touch #overlay h1, body.touch #mission-overlay h1, body.touch #shop-overlay h1 { font-size: 32px; }
   body.touch #overlay p, body.touch #mission-overlay .m-brief { font-size: 11px; }
   body.touch #mission-overlay .box { max-height: 90vh; overflow-y: auto; }
   /* Very short landscape phones — shrink the in-flight HUD further */
@@ -297,7 +324,7 @@
   }
   @media (max-height: 430px) {
     #overlay .box, #shop-overlay .box, #mission-overlay .box { padding: 14px 20px; }
-    #overlay h1 { font-size: 26px; margin-bottom: 6px; }
+    #overlay h1, #mission-overlay h1, #shop-overlay h1 { font-size: 24px; margin-bottom: 6px; }
     #overlay h2 { margin-bottom: 10px; }
     #overlay p { margin: 2px 0; }
     #overlay .start { margin-top: 12px; }
@@ -308,14 +335,20 @@
 <div id="cockpit-vignette"></div>
 <div id="cockpit-frame">
   <svg viewBox="0 0 100 100" preserveAspectRatio="none">
-    <!-- canopy diagonals at the top corners (suggests a hood) -->
-    <path d="M 0 4 L 14 0"/>
-    <path d="M 86 0 L 100 4"/>
-    <!-- bottom dashboard arc -->
-    <path d="M 0 92 Q 50 100 100 92" class="dim"/>
-    <!-- subtle hairlines on the sides -->
-    <line x1="0.4" y1="14" x2="0.4" y2="86" class="dim"/>
-    <line x1="99.6" y1="14" x2="99.6" y2="86" class="dim"/>
+    <!-- canopy hood: diagonal struts sweeping down from the top corners -->
+    <path d="M 0 7 L 17 0"/>
+    <path d="M 83 0 L 100 7"/>
+    <!-- corner brackets, all four — frames the viewport as a canopy -->
+    <path d="M 0 13 L 0 4 L 7 0"/>
+    <path d="M 93 0 L 100 4 L 100 13"/>
+    <path d="M 0 87 L 0 96 L 7 100"/>
+    <path d="M 93 100 L 100 96 L 100 87"/>
+    <!-- bottom dashboard console: arc + a center instrument notch -->
+    <path d="M 0 93 Q 50 100.5 100 93" class="dim"/>
+    <path d="M 42 99 L 45 95 L 55 95 L 58 99" class="dim"/>
+    <!-- side canopy pillars -->
+    <line x1="0.6" y1="16" x2="0.6" y2="84" class="dim"/>
+    <line x1="99.4" y1="16" x2="99.4" y2="84" class="dim"/>
   </svg>
 </div>
 <div id="hud">
@@ -343,15 +376,15 @@
     <div>Z: <span id="pos-z">0</span></div>
   </div>
   <div id="radar"><canvas id="radar-canvas" width="180" height="180"></canvas></div>
-  <svg id="crosshair" viewBox="0 0 60 60" fill="none" stroke="#00ff66" stroke-width="1.5" style="filter: drop-shadow(0 0 4px #00ff66)">
+  <svg id="crosshair" viewBox="0 0 60 60" fill="none" stroke="#00ff66" stroke-width="1.3" opacity="0.7" style="filter: drop-shadow(0 0 3px #00ff66)">
     <circle cx="30" cy="30" r="2"/>
     <path d="M30 5 L30 18 M30 42 L30 55 M5 30 L18 30 M42 30 L55 30"/>
     <path d="M12 12 L20 20 M48 12 L40 20 M12 48 L20 40 M48 48 L40 40" opacity="0.5"/>
   </svg>
-  <svg id="lead" viewBox="-12 -12 24 24" width="28" height="28" fill="none" stroke="#ffcc44" stroke-width="1.5">
+  <svg id="lead" viewBox="-12 -12 24 24" width="28" height="28" fill="none" stroke="#ffcc44" stroke-width="2.2">
     <circle cx="0" cy="0" r="8"/>
-    <line x1="-4" y1="0" x2="4" y2="0"/>
-    <line x1="0" y1="-4" x2="0" y2="4"/>
+    <line x1="-5" y1="0" x2="5" y2="0"/>
+    <line x1="0" y1="-5" x2="0" y2="5"/>
   </svg>
   <div id="off-screen"></div>
   <div id="mission-hud" class="panel">
@@ -452,10 +485,10 @@ const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
 const bloomPass = new UnrealBloomPass(
   new THREE.Vector2(innerWidth, innerHeight),
-  0.85,   // strength
+  0.95,   // strength — punchy glow on the elements that do bloom
   0.35,   // radius
-  0.55    // threshold — only pixels brighter than this bloom
-);
+  0.74    // threshold — high, so wireframe edges stay crisp and only
+);        // bullets / engine glow / explosions / pickups bloom
 composer.addPass(bloomPass);
 
 addEventListener('resize', () => {
@@ -756,21 +789,28 @@ function fillMat(color, opacity = 1) {
 // Build a ship: triangular prism body + wings, returned as a Group
 // Per-type silhouette tweaks. The shared frame is hull + wings + cockpit
 // + engine glow; we vary proportions and add type-specific details.
+// Distinct silhouettes per type: scout = needle + tall fin, no wings;
+// gunship/bomber = boxy chunky hull; interceptor/ace = winged cone.
 const SHIP_STYLES = {
-  scout:       { hullR: 0.45, hullL: 2.8, wingSpan: 0.9,  wingDepth: 0.5, finScale: 0.9, gunBarrels: false, asym: 0 },
-  interceptor: { hullR: 0.60, hullL: 2.4, wingSpan: 1.4,  wingDepth: 0.6, finScale: 0,   gunBarrels: false, asym: 0 },
-  gunship:     { hullR: 0.85, hullL: 2.4, wingSpan: 1.7,  wingDepth: 0.9, finScale: 0,   gunBarrels: true,  asym: 0.15 },
-  bomber:      { hullR: 1.00, hullL: 2.7, wingSpan: 2.0,  wingDepth: 1.1, finScale: 0,   gunBarrels: true,  asym: 0 },
-  ace:         { hullR: 0.50, hullL: 3.1, wingSpan: 1.5,  wingDepth: 0.55,finScale: 1.1, gunBarrels: false, asym: 0 },
+  scout:       { hullR: 0.42, hullL: 3.0, wingSpan: 0.32, wingDepth: 0.38,finScale: 1.55,gunBarrels: false, asym: 0,    boxHull: false },
+  interceptor: { hullR: 0.60, hullL: 2.4, wingSpan: 1.4,  wingDepth: 0.6, finScale: 0,    gunBarrels: false, asym: 0,    boxHull: false },
+  gunship:     { hullR: 0.95, hullL: 2.3, wingSpan: 1.7,  wingDepth: 0.9, finScale: 0,    gunBarrels: true,  asym: 0.15, boxHull: true },
+  bomber:      { hullR: 1.10, hullL: 2.6, wingSpan: 2.0,  wingDepth: 1.1, finScale: 0,    gunBarrels: true,  asym: 0,    boxHull: true },
+  ace:         { hullR: 0.50, hullL: 3.1, wingSpan: 1.5,  wingDepth: 0.55,finScale: 1.1, gunBarrels: false, asym: 0,    boxHull: false },
 };
 
 function buildShip(color, scale = 1, style = 'interceptor') {
   const s = SHIP_STYLES[style] || SHIP_STYLES.interceptor;
   const group = new THREE.Group();
 
-  // Hull — proportions vary by style (scout = long&thin, gunship = stocky)
-  const hullGeo = new THREE.ConeGeometry(s.hullR, s.hullL, 6);
-  hullGeo.rotateX(-Math.PI / 2);
+  // Hull — cone for fighters, a chunky box for heavies (gunship/bomber).
+  let hullGeo;
+  if (s.boxHull) {
+    hullGeo = new THREE.BoxGeometry(s.hullR * 1.5, s.hullR * 1.0, s.hullL);
+  } else {
+    hullGeo = new THREE.ConeGeometry(s.hullR, s.hullL, 6);
+    hullGeo.rotateX(-Math.PI / 2);
+  }
   const hull = new THREE.Mesh(hullGeo, fillMat(0x000000));
   const hullWire = new THREE.LineSegments(new THREE.EdgesGeometry(hullGeo), wireMat(color));
   group.add(hull); group.add(hullWire);
@@ -886,7 +926,7 @@ function buildCruiser(color, scale = 1) {
 // ====== ENEMY TYPE TABLE ======
 const ENEMY_TYPES = {
   scout: {
-    name: 'SCOUT', color: 0xff8866, scale: 0.95,
+    name: 'SCOUT', color: 0xffdd44, scale: 0.95,
     hull: 18, collisionRadius: 2.5,
     speed: [105, 25], turnRate: [2.8, 1.2], aggression: [0.3, 0.4],
     fireCdBase: [0.4, 0.25], bulletDamage: 5, projSpeed: 260, score: 60,
@@ -2197,8 +2237,8 @@ function showMissionSelect() {
     const row = document.createElement('div');
     row.className = 'mission-row' + (unlocked ? '' : ' locked');
     let badge = '';
-    if (cleared)        badge = '<span class="m-badge done">✓ CLEARED</span>';
-    else if (!unlocked) badge = '<span class="m-badge lock">🔒 LOCKED</span>';
+    if (cleared)        badge = '<span class="m-badge done">[ CLEARED ]</span>';
+    else if (!unlocked) badge = '<span class="m-badge lock">[ LOCKED ]</span>';
     row.innerHTML = `
       <div class="m-name">${m.name}<span class="m-reward">${m.reward > 0 ? '+' + m.reward + ' cr' : '—'}</span></div>
       <div class="m-brief">${unlocked ? m.brief : 'Complete the previous campaign operation to unlock this one.'}</div>
@@ -3164,9 +3204,12 @@ const posY = document.getElementById('pos-y');
 const posZ = document.getElementById('pos-z');
 
 function updateHUD() {
-  hullBar.style.width   = (player.hull / player.maxHull * 100) + '%';
+  const hullFrac = player.hull / player.maxHull;
+  hullBar.style.width   = (hullFrac * 100) + '%';
   shieldBar.style.width = (player.shield / player.maxShield * 100) + '%';
   energyBar.style.width = (player.energy / player.maxEnergy * 100) + '%';
+  // Hull bar shifts colour by danger: green > 50%, amber 25-50%, red+blink < 25%.
+  hullBar.className = hullFrac < 0.25 ? 'crit' : hullFrac < 0.5 ? 'warn' : '';
   scoreEl.textContent = score;
   hiscoreEl.textContent = save.highScore;
   creditsEl.textContent = save.credits;
@@ -3270,7 +3313,9 @@ function updateOffScreenIndicators() {
     const sx = innerWidth / 2 + cosA * scale;
     const sy = innerHeight / 2 + sinA * scale;
     const rotDeg = angle * 180 / Math.PI;
-    html += `<svg class="off-arrow" style="left:${sx}px;top:${sy}px;transform:translate(-50%,-50%) rotate(${rotDeg}deg)" width="20" height="20" viewBox="-10 -10 20 20"><polygon points="-7,-5 -7,5 7,0" fill="currentColor"/></svg>`;
+    // Colour-code threats to match the radar: boss magenta, ace white.
+    const col = e.isBoss ? '#ff44ff' : e.isAce ? '#ffffff' : '#ff3344';
+    html += `<svg class="off-arrow" style="left:${sx}px;top:${sy}px;color:${col};transform:translate(-50%,-50%) rotate(${rotDeg}deg)" width="20" height="20" viewBox="-10 -10 20 20"><polygon points="-7,-5 -7,5 7,0" fill="currentColor"/></svg>`;
   }
   offScreenEl.innerHTML = html;
 }
