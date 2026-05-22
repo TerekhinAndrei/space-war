@@ -374,6 +374,7 @@
     <div>X: <span id="pos-x">0</span></div>
     <div>Y: <span id="pos-y">0</span></div>
     <div>Z: <span id="pos-z">0</span></div>
+    <div>FPS: <span id="fps">--</span></div>
   </div>
   <div id="radar"><canvas id="radar-canvas" width="180" height="180"></canvas></div>
   <svg id="crosshair" viewBox="0 0 60 60" fill="none" stroke="#00ff66" stroke-width="1.3" opacity="0.7" style="filter: drop-shadow(0 0 3px #00ff66)">
@@ -773,10 +774,10 @@ function makeNebula() {
 scene.add(makeNebula());
 
 // ====== LIGHTING ======
-scene.add(new THREE.AmbientLight(0x223344, 0.6));
-const sun = new THREE.DirectionalLight(0xffffff, 0.8);
-sun.position.set(500, 300, -200);
-scene.add(sun);
+// None. Every material is Basic/Line/Points — they ignore lights entirely,
+// so the scene carries no lights at all. The neon look comes from material
+// colors + the bloom pass, not from lighting. (Removing the lights is a
+// pure perf win: no per-frame light state for the renderer to process.)
 
 // ====== WIREFRAME HELPERS ======
 function wireMat(color, opacity = 1) {
@@ -862,11 +863,6 @@ function buildShip(color, scale = 1, style = 'interceptor') {
   eye.position.set(0, 0.15, -0.5);
   group.add(eye);
 
-  // Engine glow point
-  const glow = new THREE.PointLight(color, 0.6, 6);
-  glow.position.set(0, 0, 1.0);
-  group.add(glow);
-
   group.scale.setScalar(scale);
   return group;
 }
@@ -907,9 +903,6 @@ function buildCruiser(color, scale = 1) {
     const e = new THREE.Mesh(eGeo, fillMat(color));
     e.position.set(x, -0.2, 2.5);
     g.add(e);
-    const gl = new THREE.PointLight(color, 0.7, 8);
-    gl.position.set(x, -0.2, 2.9);
-    g.add(gl);
   }
   // Twin gun barrels on top
   const barGeo = new THREE.CylinderGeometry(0.08, 0.08, 1.4, 6);
@@ -1160,9 +1153,6 @@ function buildMissile(color) {
   noseGeo.rotateX(-Math.PI / 2);
   noseGeo.translate(0, 0, -0.5);
   g.add(new THREE.LineSegments(new THREE.EdgesGeometry(noseGeo), wireMat(color)));
-  const glow = new THREE.PointLight(0xff6633, 1.6, 14);
-  glow.position.set(0, 0, 0.5);
-  g.add(glow);
   return g;
 }
 
@@ -1731,12 +1721,12 @@ function updatePickups(dt) {
       t.apply();
       showToast(t.label, '#' + t.color.toString(16).padStart(6, '0'));
       playPickup();
-      scene.remove(p.obj);
+      scene.remove(p.obj); disposeObject(p.obj);
       pickups.splice(i, 1);
       continue;
     }
     if (p.life <= 0) {
-      scene.remove(p.obj);
+      scene.remove(p.obj); disposeObject(p.obj);
       pickups.splice(i, 1);
       continue;
     }
@@ -1744,21 +1734,40 @@ function updatePickups(dt) {
   }
 }
 
+// ====== RESOURCE HELPERS ======
+// Recursively dispose an Object3D's GPU geometries/materials. Anything
+// flagged `__shared` is a pooled resource and must NOT be disposed.
+function disposeObject(obj) {
+  obj.traverse(n => {
+    if (n.geometry && !n.geometry.__shared) n.geometry.dispose();
+    if (n.material) {
+      const mats = Array.isArray(n.material) ? n.material : [n.material];
+      for (const m of mats) if (m && !m.__shared) m.dispose();
+    }
+  });
+}
+
 // ====== BULLETS ======
+// Bullets are the most-spawned object — share one geometry and cache one
+// material per colour so firing allocates zero GPU buffers (and leaks none).
+const BULLET_GEO = new THREE.CylinderGeometry(0.12, 0.12, 3, 6);
+BULLET_GEO.rotateX(Math.PI / 2);
+BULLET_GEO.__shared = true;
+const bulletMats = new Map();
+function bulletMaterial(color) {
+  let m = bulletMats.get(color);
+  if (!m) { m = new THREE.MeshBasicMaterial({ color }); m.__shared = true; bulletMats.set(color, m); }
+  return m;
+}
+const _bulletUp = new THREE.Vector3(0, 0, 1);
 function spawnBullet(origin, dir, owner, speed, damage, colorOverride) {
   const color = colorOverride ?? (owner === 'player' ? C_LASER_P : C_LASER_E);
   const v = speed ?? (owner === 'player' ? 280 : 160);
   const d = damage ?? (owner === 'player' ? 12 : 8);
-  const geo = new THREE.CylinderGeometry(0.12, 0.12, 3, 6);
-  geo.rotateX(Math.PI / 2);
-  const mat = new THREE.MeshBasicMaterial({ color });
-  const mesh = new THREE.Mesh(geo, mat);
+  const mesh = new THREE.Mesh(BULLET_GEO, bulletMaterial(color));
   mesh.position.copy(origin);
-  const quat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,1), dir.clone().normalize());
-  mesh.quaternion.copy(quat);
+  mesh.quaternion.setFromUnitVectors(_bulletUp, dir.clone().normalize());
   scene.add(mesh);
-  const light = new THREE.PointLight(color, 1, 12);
-  mesh.add(light);
   bullets.push({
     obj: mesh,
     velocity: dir.clone().multiplyScalar(v),
@@ -1832,7 +1841,7 @@ function updateMissiles(dt) {
       }
     }
     if (destroyed || m.life <= 0) {
-      scene.remove(m.obj);
+      scene.remove(m.obj); disposeObject(m.obj);
       missiles.splice(i, 1);
     }
   }
@@ -1913,6 +1922,9 @@ function updateTrails(dt) {
 }
 
 // ====== EXPLOSIONS ======
+// Shared shockwave-ring geometry — every explosion scales its own copy.
+const RING_GEO = new THREE.RingGeometry(0.5, 0.7, 24);
+RING_GEO.__shared = true;
 function spawnExplosion(pos, color, size = 1) {
   if (size >= 0.8) playExplosionSound(pos, size);
   else playImpact(pos);
@@ -1937,17 +1949,13 @@ function spawnExplosion(pos, color, size = 1) {
   scene.add(pts);
 
   const ring = new THREE.Mesh(
-    new THREE.RingGeometry(0.5, 0.7, 24),
+    RING_GEO,  // shared geometry — scaled per-explosion, never disposed
     new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide, transparent: true })
   );
   ring.position.copy(pos);
   scene.add(ring);
 
-  const light = new THREE.PointLight(color, 4, 60 * size);
-  light.position.copy(pos);
-  scene.add(light);
-
-  explosions.push({ pts, ring, light, velocities, life: 1.2, maxLife: 1.2, size });
+  explosions.push({ pts, ring, velocities, life: 1.2, maxLife: 1.2, size });
 }
 
 // ====== INPUT ======
@@ -2205,14 +2213,17 @@ let missionToken = 0; // invalidates pending setTimeout spawns across missions
 function clearArray(arr, rm) { for (const x of arr) rm(x); arr.length = 0; }
 
 function resetWorld() {
-  clearArray(enemies,  e  => { disposeTrail(e.trail); scene.remove(e.obj); });
-  clearArray(bullets,  b  => scene.remove(b.obj));
-  clearArray(missiles, m  => scene.remove(m.obj));
-  clearArray(pickups,  p  => scene.remove(p.obj));
-  clearArray(asteroids,a  => scene.remove(a.obj));
-  clearArray(explosions, ex => { scene.remove(ex.pts); scene.remove(ex.ring); scene.remove(ex.light); });
+  clearArray(enemies,  e  => { disposeTrail(e.trail); scene.remove(e.obj); disposeObject(e.obj); });
+  clearArray(bullets,  b  => scene.remove(b.obj));  // bullets share geo/mat — nothing to dispose
+  clearArray(missiles, m  => { scene.remove(m.obj); disposeObject(m.obj); });
+  clearArray(pickups,  p  => { scene.remove(p.obj); disposeObject(p.obj); });
+  clearArray(asteroids,a  => { scene.remove(a.obj); disposeObject(a.obj); });
+  clearArray(explosions, ex => {
+    scene.remove(ex.pts); scene.remove(ex.ring);
+    ex.pts.geometry.dispose(); ex.pts.material.dispose(); ex.ring.material.dispose();
+  });
   squadrons.length = 0;
-  if (station) { scene.remove(station); station = null; }
+  if (station) { scene.remove(station); disposeObject(station); station = null; }
   player.obj.position.set(0, 0, 0);
   player.obj.quaternion.identity();
   player.velocity.set(0, 0, 0);
@@ -2389,7 +2400,7 @@ function destroyEnemy(e, idx) {
   removeFromSquad(e);
   disposeTrail(e.trail);
   dropLoot(e);
-  scene.remove(e.obj);
+  scene.remove(e.obj); disposeObject(e.obj);
   enemies.splice(idx, 1);
   kills++;
   score += e.score;
@@ -3110,9 +3121,11 @@ function updateExplosions(dt) {
     ex.pts.material.opacity = 1 - t;
     ex.ring.scale.setScalar(1 + t * 20 * ex.size);
     ex.ring.material.opacity = (1 - t) * 0.8;
-    ex.light.intensity = (1 - t) * 4;
     if (ex.life <= 0) {
-      scene.remove(ex.pts); scene.remove(ex.ring); scene.remove(ex.light);
+      scene.remove(ex.pts); scene.remove(ex.ring);
+      ex.pts.geometry.dispose();   // unique per-explosion buffers — free them
+      ex.pts.material.dispose();
+      ex.ring.material.dispose();  // ring geometry is shared, not disposed
       explosions.splice(i, 1);
     }
   }
@@ -3202,6 +3215,7 @@ const powerEl   = document.getElementById('power-mode');
 const posX = document.getElementById('pos-x');
 const posY = document.getElementById('pos-y');
 const posZ = document.getElementById('pos-z');
+const fpsEl = document.getElementById('fps');
 
 function updateHUD() {
   const hullFrac = player.hull / player.maxHull;
@@ -3391,8 +3405,17 @@ function updateRadar() {
 }
 
 // ====== MAIN LOOP ======
+let fpsAccum = 0, fpsFrames = 0;
 function animate() {
-  const dt = Math.min(clock.getDelta(), 1/30);
+  const raw = clock.getDelta();          // real delta (unclamped) for FPS
+  const dt = Math.min(raw, 1/30);        // clamped delta for simulation
+  fpsAccum += raw; fpsFrames++;
+  if (fpsAccum >= 0.5) {
+    const fps = Math.round(fpsFrames / fpsAccum);
+    fpsEl.textContent = fps;
+    fpsEl.style.color = fps >= 50 ? '#00ff66' : fps >= 30 ? '#ffaa22' : '#ff3344';
+    fpsAccum = 0; fpsFrames = 0;
+  }
   if (started && !paused && player.hull > 0) {
     updatePlayer(dt);
     updateEnemies(dt);
