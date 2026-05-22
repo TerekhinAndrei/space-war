@@ -1050,11 +1050,11 @@ const ENEMY_TYPES = {
   },
   bomber: {
     name: 'BOMBER', color: 0xcc55ff, scale: 1.9,
-    hull: 70, collisionRadius: 4.5,
+    hull: 32, collisionRadius: 4.5,   // FRAGILE — its threat is the siege, not durability
     speed: [40, 10], turnRate: [0.7, 0.3], aggression: [1, 0],
     fireCdBase: [0.8, 0.4], bulletDamage: 9, projSpeed: 220, score: 220,
     targetsStation: true,   // ignores the player — sieges the station
-    siegeDPS: 4,            // hull/sec it strips from the station when in range
+    siegeDPS: 2.5,          // hull/sec it strips from the station when in range
   },
   ace: {
     name: 'ACE', color: 0xffffff, scale: 1.55,
@@ -2463,6 +2463,12 @@ function beginMission(def) {
 
 function startMissionSpawns() {
   if (mission.def.type === 'defense') {
+    // Start the player right at the station they're defending, facing it,
+    // so they aren't handicapped by a 300-unit flight before the fight.
+    if (station) {
+      player.obj.position.set(station.position.x, station.position.y, station.position.z + 110);
+      player.obj.lookAt(station.position);
+    }
     spawnBomberRun(3);
     spawnWave(2);   // a couple of fighters to harass the player
   } else {
