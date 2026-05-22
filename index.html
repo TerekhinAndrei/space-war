@@ -481,8 +481,8 @@
     <div id="mission-list"></div>
     <p class="shop-hint" id="mission-stats">HI: 0 · CREDITS: 0</p>
     <div class="menu-btns" style="flex-direction:row;justify-content:center;max-width:none">
-      <div class="menu-btn" id="mb-ms-shop">⬆ UPGRADE BAY</div>
       <div class="menu-btn" id="mb-ms-settings">⚙ SETTINGS</div>
+      <div class="menu-btn" id="mb-ms-help">? HOW TO PLAY</div>
     </div>
   </div>
 </div>
@@ -493,7 +493,6 @@
     <h2>RETRO 3D COMBAT SIMULATOR</h2>
     <div class="menu-btns">
       <div class="menu-btn primary" id="mb-missions">▶ MISSIONS</div>
-      <div class="menu-btn" id="mb-shop">⬆ UPGRADE BAY</div>
       <div class="menu-btn" id="mb-settings">⚙ SETTINGS</div>
       <div class="menu-btn" id="mb-help">? HOW TO PLAY</div>
     </div>
@@ -522,7 +521,7 @@
       <p><span class="key">W</span> <span class="key">S</span> — thrust · <span class="key">A</span> <span class="key">D</span> — strafe · <span class="key">Q</span> <span class="key">E</span> — roll</p>
       <p><span class="key">1</span> laser · <span class="key">2</span> pulse · <span class="key">3</span> missiles (needs target lock)</p>
       <p><span class="key">SHIFT</span> boost · <span class="key">X</span> brake · <span class="key">TAB</span> power distribution</p>
-      <p><span class="key">B</span> upgrade shop · <span class="key">M</span> sound · <span class="key">ESC</span> pause</p>
+      <p><span class="key">M</span> sound · <span class="key">ESC</span> pause</p>
     </div>
     <!-- Touch — mobile only -->
     <div class="help-touch">
@@ -532,8 +531,8 @@
       <p>Tap <span class="key">II</span> to pause</p>
     </div>
     <p style="opacity:0.85;margin-top:12px">Crystals dropped by enemies restore hull, shield, energy &amp; missiles.</p>
-    <p style="opacity:0.85">Fly slowly into the station to dock — a full free repair &amp; rearm.</p>
-    <p style="opacity:0.85">The upgrade shop spends credits on permanent ship upgrades.</p>
+    <p style="opacity:0.85">Fly in slowly and dock at the station — full repair, rearm,</p>
+    <p style="opacity:0.85">and the upgrade shop, where credits buy permanent ship upgrades.</p>
     <div class="menu-btns" style="margin-top:14px">
       <div class="menu-btn" id="mb-help-back">◀ BACK</div>
     </div>
@@ -1434,17 +1433,21 @@ function onWaveComplete() {
 }
 
 // ====== SHOP UI ======
-// The shop is a top layer (z-index 12) — it doesn't hide the menu behind
-// it, so closing it just reveals that menu. If opened mid-flight it first
-// pauses (so the pause screen becomes the backdrop).
+// The shop is reached ONLY by docking at the station — there is no menu
+// shortcut. Upgrading is a deliberate trip (fly in, dock under fire),
+// not a free menu pop. openShop is called from the docking code; it
+// freezes the game, and closing the shop drops straight back into play.
+let shopFromPlay = false;
 function openShop() {
-  if (started && !paused && player.hull > 0) pauseGame();
+  shopFromPlay = started && !paused && player.hull > 0;
+  if (shopFromPlay) { paused = true; silenceEngine(); mouse.down = false; }
   document.getElementById('shop-overlay').style.display = 'flex';
   if (document.pointerLockElement) document.exitPointerLock();
   renderShop();
 }
 function closeShop() {
   document.getElementById('shop-overlay').style.display = 'none';
+  if (shopFromPlay) { shopFromPlay = false; resumeGame(); }
 }
 
 // ====== SETTINGS UI ======
@@ -1503,11 +1506,10 @@ function renderSettings() {
 }
 // Wire the menu buttons (all static HTML, present at load).
 document.getElementById('mb-missions').addEventListener('click', e => { e.stopPropagation(); showMissionSelect(); });
-document.getElementById('mb-shop').addEventListener('click', e => { e.stopPropagation(); openShop(); });
 document.getElementById('mb-settings').addEventListener('click', e => { e.stopPropagation(); showSettings(); });
 document.getElementById('mb-settings-back').addEventListener('click', e => { e.stopPropagation(); closeSettings(); });
-document.getElementById('mb-ms-shop').addEventListener('click', e => { e.stopPropagation(); openShop(); });
 document.getElementById('mb-ms-settings').addEventListener('click', e => { e.stopPropagation(); showSettings(); });
+document.getElementById('mb-ms-help').addEventListener('click', e => { e.stopPropagation(); showHelp(); });
 document.getElementById('mb-shop-close').addEventListener('click', e => { e.stopPropagation(); closeShop(); });
 document.getElementById('mb-help').addEventListener('click', e => { e.stopPropagation(); showHelp(); });
 document.getElementById('mb-help-back').addEventListener('click', e => { e.stopPropagation(); closeHelp(); });
@@ -2131,7 +2133,7 @@ const MOUSE_SENS = 0.0022;
 
 const CAPTURED_KEYS = new Set([
   'KeyW','KeyA','KeyS','KeyD','KeyQ','KeyE','KeyC','KeyX',
-  'KeyB','KeyM','Tab',
+  'KeyM','Tab',
   'Space','ShiftLeft','ShiftRight','ControlLeft','ControlRight',
   'ArrowUp','ArrowDown','ArrowLeft','ArrowRight',
   'Digit1','Digit2','Digit3',
@@ -2149,10 +2151,6 @@ addEventListener('keydown', e => {
   if (e.code === 'Digit2') player.weapon = 1;
   if (e.code === 'Digit3') player.weapon = 2;
   if (e.code === 'Tab' && started && player.hull > 0) cyclePowerMode();
-  if (e.code === 'KeyB') {
-    const shopOpen = document.getElementById('shop-overlay').style.display === 'flex';
-    if (shopOpen) closeShop(); else openShop();
-  }
   if (e.code === 'KeyM') { setMuted(!save.settings.mute); showToast(save.settings.mute ? 'SOUND: MUTED' : 'SOUND: ON'); }
 });
 addEventListener('keyup', e => {
@@ -3319,10 +3317,9 @@ function updateStation(dt) {
   if (inRange && slow && !player.dockLockout) {
     player.dockProgress += dt / 1.8;
     if (player.dockProgress >= 1) {
-      // Docking is the in-flight pit stop: a full free repair + rearm
-      // without leaving the cockpit. The shop (permanent upgrades) is a
-      // separate menu — docking no longer opens it, so the two don't
-      // overlap: station = tactical repair, shop = meta-progression.
+      // Docking is the full pit stop: a free repair + rearm AND the only
+      // way into the upgrade shop. The station is the hub — upgrading
+      // means flying there, not popping a menu.
       player.dockProgress = 0;
       player.dockLockout = true;
       player.hull   = player.maxHull;
@@ -3330,7 +3327,8 @@ function updateStation(dt) {
       player.energy = player.maxEnergy;
       player.missileAmmo = player.maxMissileAmmo;
       playDockSound();
-      showToast('DOCKED — HULL · SHIELD · ENERGY · MISSILES RESTORED', '#66aaff');
+      showToast('DOCKED — SYSTEMS RESTORED', '#66aaff');
+      openShop();
     }
   } else {
     player.dockProgress = Math.max(0, player.dockProgress - dt / 0.8);
