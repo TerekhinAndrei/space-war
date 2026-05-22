@@ -1050,11 +1050,11 @@ const ENEMY_TYPES = {
   },
   bomber: {
     name: 'BOMBER', color: 0xcc55ff, scale: 1.9,
-    hull: 90, collisionRadius: 4.5,
+    hull: 70, collisionRadius: 4.5,
     speed: [40, 10], turnRate: [0.7, 0.3], aggression: [1, 0],
     fireCdBase: [0.8, 0.4], bulletDamage: 9, projSpeed: 220, score: 220,
     targetsStation: true,   // ignores the player — sieges the station
-    siegeDPS: 6,            // hull/sec it strips from the station when in range
+    siegeDPS: 4,            // hull/sec it strips from the station when in range
   },
   ace: {
     name: 'ACE', color: 0xffffff, scale: 1.55,
@@ -1681,8 +1681,11 @@ function leadPoint(shooterPos, targetPos, targetVel, projSpeed, out) {
 
 let reinforceTimer = 0;
 function updateSpawner(dt) {
-  // No trickle reinforcements during a boss or ace duel — keep those focused.
+  // No trickle reinforcements during a boss/ace duel or a station-defense
+  // mission — those fights are deliberately spawn-scripted; extra fighters
+  // would just dilute the focus (and break the defense-balance math).
   if (enemies.some(e => e.isBoss || e.isAce)) { reinforceTimer = 0; return; }
+  if (mission.def && mission.def.type === 'defense') { reinforceTimer = 0; return; }
   reinforceTimer -= dt;
   const target = 3 + wave;
   if (reinforceTimer <= 0 && enemies.length < target) {
@@ -2368,7 +2371,7 @@ const mission = {
   def: null, active: false, resolved: false,
   killQuota: 0, killCount: 0,
   timer: 0, duration: 0,
-  stationMaxHull: 320, stationHull: 320,
+  stationMaxHull: 600, stationHull: 600,
   phase: 0, spawnTimer: 0,
   flagshipAdds: 0,        // escort reinforcement waves spawned in the finale
 };
@@ -2582,8 +2585,8 @@ function updateMission(dt) {
     mission.timer += dt;
     mission.spawnTimer -= dt;
     if (mission.spawnTimer <= 0) {
-      mission.spawnTimer = 13 + Math.random() * 5;
-      spawnBomberRun(1 + Math.floor(mission.timer / 25));
+      mission.spawnTimer = 16 + Math.random() * 5;
+      spawnBomberRun(1 + Math.floor(mission.timer / 40));
     }
     if (mission.stationHull <= 0) {
       if (station) { spawnExplosion(station.position.clone(), C_STATION, 6); addShake(2); }
