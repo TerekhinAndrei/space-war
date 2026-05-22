@@ -3303,6 +3303,10 @@ function updateStation(dt) {
   if (inRange && slow && !player.dockLockout) {
     player.dockProgress += dt / 1.8;
     if (player.dockProgress >= 1) {
+      // Docking is the in-flight pit stop: a full free repair + rearm
+      // without leaving the cockpit. The shop (permanent upgrades) is a
+      // separate menu — docking no longer opens it, so the two don't
+      // overlap: station = tactical repair, shop = meta-progression.
       player.dockProgress = 0;
       player.dockLockout = true;
       player.hull   = player.maxHull;
@@ -3310,8 +3314,7 @@ function updateStation(dt) {
       player.energy = player.maxEnergy;
       player.missileAmmo = player.maxMissileAmmo;
       playDockSound();
-      showToast('DOCKED — ALL SYSTEMS RESTORED', '#66aaff');
-      openShop();
+      showToast('DOCKED — HULL · SHIELD · ENERGY · MISSILES RESTORED', '#66aaff');
     }
   } else {
     player.dockProgress = Math.max(0, player.dockProgress - dt / 0.8);
