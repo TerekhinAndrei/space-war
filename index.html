@@ -140,7 +140,7 @@
   #toasts {
     position: absolute; top: 90px; left: 50%; transform: translateX(-50%);
     pointer-events: none; display: flex; flex-direction: column;
-    align-items: center; gap: 8px; z-index: 6;
+    align-items: center; gap: 8px; z-index: 20;
   }
   .toast {
     background: rgba(0, 16, 0, 0.75);
@@ -153,14 +153,59 @@
     from { opacity: 0; transform: translateY(-12px); }
     to   { opacity: 1; transform: translateY(0); }
   }
-  #shop-overlay, #mission-overlay, #settings-overlay, #help-overlay {
+  #shop-overlay, #mission-overlay, #settings-overlay, #help-overlay, #ach-overlay {
     position: absolute; inset: 0; background: rgba(0, 0, 0, 0.92);
     display: none; align-items: center; justify-content: center;
     z-index: 12; color: #00ff66; font-family: 'Courier New', monospace;
     text-shadow: 0 0 8px #00ff66;
   }
   #mission-overlay { z-index: 11; }
-  #settings-overlay, #help-overlay { z-index: 13; }
+  #settings-overlay, #help-overlay, #ach-overlay { z-index: 13; }
+  /* --- ACHIEVEMENTS screen --- */
+  #ach-overlay .box {
+    border: 1px solid #00ff66; padding: 28px 38px;
+    box-shadow: 0 0 30px rgba(0,255,102,0.35);
+    min-width: 540px; max-width: 620px; max-height: 90vh;
+    display: flex; flex-direction: column;
+  }
+  #ach-overlay h1 { font-size: 40px; letter-spacing: 6px; margin-bottom: 6px; }
+  #ach-overlay h2 { font-size: 12px; letter-spacing: 3px; margin-bottom: 14px; opacity: 0.7; }
+  #ach-summary { font-size: 12px; letter-spacing: 1px; margin-bottom: 12px; opacity: 0.85; }
+  #ach-summary .ach-gold { color: #ffcc44; text-shadow: 0 0 6px #ffcc44; }
+  #ach-list { overflow-y: auto; flex: 1; padding-right: 6px; }
+  .ach-cat { font-size: 11px; letter-spacing: 3px; opacity: 0.55;
+    margin: 14px 0 6px; border-bottom: 1px solid rgba(0,255,102,0.25); padding-bottom: 4px; }
+  .ach-cat:first-child { margin-top: 0; }
+  .ach-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 9px 12px; border: 1px solid rgba(0,255,102,0.35); margin: 6px 0;
+    background: rgba(0,30,10,0.3);
+  }
+  .ach-row.done { border-color: #ffcc44; background: rgba(40,30,0,0.4); }
+  .ach-row.locked { opacity: 0.5; }
+  .ach-icon { font-size: 20px; width: 26px; text-align: center; flex-shrink: 0; }
+  .ach-row.done .ach-icon { color: #ffcc44; text-shadow: 0 0 8px #ffcc44; }
+  .ach-body { flex: 1; min-width: 0; }
+  .ach-name { font-weight: bold; font-size: 13px; letter-spacing: 1px; }
+  .ach-row.done .ach-name { color: #ffcc44; text-shadow: 0 0 6px #ffcc44; }
+  .ach-desc { font-size: 11px; opacity: 0.7; margin-top: 2px; }
+  .ach-reward { font-size: 11px; color: #ffcc44; text-shadow: 0 0 5px #ffcc44;
+    min-width: 64px; text-align: right; flex-shrink: 0; }
+  .ach-bar { height: 5px; background: rgba(0,255,102,0.15);
+    border: 1px solid rgba(0,255,102,0.3); margin-top: 5px; }
+  .ach-bar > div { height: 100%; background: #00ff66; box-shadow: 0 0 6px #00ff66; }
+  .ach-prog-txt { font-size: 10px; opacity: 0.6; margin-top: 3px; }
+  /* --- achievement unlock toast --- */
+  .toast.ach {
+    background: rgba(28, 20, 0, 0.92);
+    border: 1px solid #ffcc44; color: #ffcc44;
+    box-shadow: 0 0 20px rgba(255,204,68,0.55);
+    text-align: center; padding: 10px 26px; min-width: 220px;
+  }
+  .toast.ach .ach-toast-top { font-size: 10px; letter-spacing: 2px; opacity: 0.8; }
+  .toast.ach .ach-toast-name { font-size: 16px; font-weight: bold; letter-spacing: 2px; margin: 3px 0; }
+  .toast.ach .ach-toast-desc { font-size: 10px; opacity: 0.75; }
+  .toast.ach .ach-toast-rew { font-size: 11px; margin-top: 4px; }
   #settings-overlay .box, #help-overlay .box {
     border: 1px solid #00ff66; padding: 32px 44px;
     box-shadow: 0 0 30px rgba(0,255,102,0.35); min-width: 440px; max-width: 640px;
@@ -342,13 +387,13 @@
   body.touch #toasts { top: 66px; left: 10px; transform: none; align-items: flex-start; }
   body.touch .toast { font-size: 11px; padding: 5px 12px; }
   body.touch #overlay .box, body.touch #shop-overlay .box, body.touch #mission-overlay .box,
-  body.touch #settings-overlay .box, body.touch #help-overlay .box {
+  body.touch #settings-overlay .box, body.touch #help-overlay .box, body.touch #ach-overlay .box {
     min-width: 0; max-width: 94vw; padding: 18px 22px;
   }
   body.touch #overlay h1, body.touch #mission-overlay h1, body.touch #shop-overlay h1,
-  body.touch #settings-overlay h1, body.touch #help-overlay h1 { font-size: 32px; }
+  body.touch #settings-overlay h1, body.touch #help-overlay h1, body.touch #ach-overlay h1 { font-size: 32px; }
   body.touch #overlay p, body.touch #mission-overlay .m-brief, body.touch #help-overlay p { font-size: 11px; }
-  body.touch #mission-overlay .box, body.touch #help-overlay .box { max-height: 92vh; overflow-y: auto; }
+  body.touch #mission-overlay .box, body.touch #help-overlay .box, body.touch #ach-overlay .box { max-height: 92vh; overflow-y: auto; }
   /* Control-hint blocks: show only the relevant input scheme */
   .help-touch { display: none; }
   body.touch .help-desktop { display: none; }
@@ -365,11 +410,11 @@
      out-specify the base body.touch overlay rules above. */
   @media (max-height: 440px) {
     body.touch #overlay .box, body.touch #shop-overlay .box, body.touch #mission-overlay .box,
-    body.touch #settings-overlay .box, body.touch #help-overlay .box { padding: 12px 22px; }
+    body.touch #settings-overlay .box, body.touch #help-overlay .box, body.touch #ach-overlay .box { padding: 12px 22px; }
     body.touch #overlay h1, body.touch #mission-overlay h1, body.touch #shop-overlay h1,
-    body.touch #settings-overlay h1, body.touch #help-overlay h1 { font-size: 22px; letter-spacing: 4px; margin-bottom: 4px; }
+    body.touch #settings-overlay h1, body.touch #help-overlay h1, body.touch #ach-overlay h1 { font-size: 22px; letter-spacing: 4px; margin-bottom: 4px; }
     body.touch #overlay h2, body.touch #mission-overlay h2, body.touch #shop-overlay h2,
-    body.touch #settings-overlay h2, body.touch #help-overlay h2 { margin-bottom: 8px; font-size: 10px; }
+    body.touch #settings-overlay h2, body.touch #help-overlay h2, body.touch #ach-overlay h2 { margin-bottom: 8px; font-size: 10px; }
     body.touch #overlay p, body.touch #help-overlay p { margin: 1px 0; line-height: 1.5; }
     body.touch #overlay .start { margin-top: 10px; }
     body.touch #mission-list { gap: 5px; margin: 8px 0; }
@@ -480,7 +525,8 @@
     <h2>SECTOR COMMAND · CHOOSE AN OPERATION</h2>
     <div id="mission-list"></div>
     <p class="shop-hint" id="mission-stats">HI: 0 · CREDITS: 0</p>
-    <div class="menu-btns" style="flex-direction:row;justify-content:center;max-width:none">
+    <div class="menu-btns" style="flex-direction:row;justify-content:center;max-width:none;flex-wrap:wrap">
+      <div class="menu-btn" id="mb-ms-ach">★ ACHIEVEMENTS</div>
       <div class="menu-btn" id="mb-ms-settings">⚙ SETTINGS</div>
       <div class="menu-btn" id="mb-ms-help">? HOW TO PLAY</div>
     </div>
@@ -493,6 +539,7 @@
     <h2>RETRO 3D COMBAT SIMULATOR</h2>
     <div class="menu-btns">
       <div class="menu-btn primary" id="mb-missions">▶ MISSIONS</div>
+      <div class="menu-btn" id="mb-ach">★ ACHIEVEMENTS</div>
       <div class="menu-btn" id="mb-settings">⚙ SETTINGS</div>
       <div class="menu-btn" id="mb-help">? HOW TO PLAY</div>
     </div>
@@ -507,6 +554,18 @@
     <div id="settings-list"></div>
     <div class="menu-btns" style="margin-top:14px">
       <div class="menu-btn" id="mb-settings-back">◀ BACK</div>
+    </div>
+  </div>
+</div>
+
+<div id="ach-overlay">
+  <div class="box">
+    <h1>ACHIEVEMENTS</h1>
+    <h2>PILOT SERVICE RECORD</h2>
+    <div id="ach-summary"></div>
+    <div id="ach-list"></div>
+    <div class="menu-btns" style="margin-top:14px">
+      <div class="menu-btn" id="mb-ach-back">◀ BACK</div>
     </div>
   </div>
 </div>
@@ -1295,10 +1354,12 @@ const SAVE_KEY = 'space_war_save_v1';
 const DEFAULT_SAVE = {
   highScore: 0, credits: 0,
   upgrades: { hull: 0, shield: 0, energy: 0, damage: 0, speed: 0, missiles: 0 },
-  unlocked: [],
   missionsCleared: [],   // ids of campaign missions completed
   campaignDone: false,   // finale beaten at least once
   settings: { mute: false, sensitivity: 1.0, graphics: 'medium' },
+  // Lifetime career counters — feed cumulative achievements.
+  stats: { kills: 0, pickups: 0, deaths: 0, docks: 0, typesKilled: [] },
+  achievements: {},      // id -> true once unlocked
 };
 let save = JSON.parse(JSON.stringify(DEFAULT_SAVE));
 try {
@@ -1308,7 +1369,9 @@ try {
     save = Object.assign(save, parsed);
     save.upgrades = Object.assign({}, DEFAULT_SAVE.upgrades, parsed.upgrades || {});
     save.settings = Object.assign({}, DEFAULT_SAVE.settings, parsed.settings || {});
-    save.unlocked = parsed.unlocked || [];
+    save.stats = Object.assign({}, DEFAULT_SAVE.stats, parsed.stats || {});
+    save.stats.typesKilled = (parsed.stats && parsed.stats.typesKilled) || [];
+    save.achievements = (parsed.achievements && typeof parsed.achievements === 'object') ? parsed.achievements : {};
     save.missionsCleared = parsed.missionsCleared || [];
     save.campaignDone = !!parsed.campaignDone;
   }
@@ -1357,7 +1420,7 @@ function buyUpgrade(id) {
   save.upgrades[id] = (save.upgrades[id] || 0) + 1;
   persistSave();
   applyUpgrades();
-  unlock('first-upgrade', 'UPGRADED', 'First upgrade purchased');
+  evaluateAchievements({ event: 'upgrade' });
   renderShop();
   updateCreditsHUD();
   if (audioCtx) {
@@ -1389,21 +1452,142 @@ function cyclePowerMode() {
 }
 
 // ====== ACHIEVEMENTS / TOASTS ======
-function showToast(text, color = '#00ff66') {
-  const el = document.createElement('div');
-  el.className = 'toast';
-  el.textContent = text;
-  el.style.color = color;
-  el.style.borderColor = color;
+// Data-driven engagement layer. Every achievement has a `check(ctx)` that
+// reads career stats (save.stats), the live run (kills/score/wave/mission)
+// and an optional event context. `evaluateAchievements` is called after any
+// state change that could satisfy one; unlocking grants a credit bounty.
+const ACHIEVEMENTS = [
+  // --- PROGRESSION — the guided first-hour path ---
+  { id: 'first-kill',  cat: 'prog', name: 'FIRST BLOOD',    desc: 'Destroy your first enemy ship',     reward: 50,
+    check: () => save.stats.kills >= 1 },
+  { id: 'loot-grab',   cat: 'prog', name: 'SALVAGER',       desc: 'Collect your first loot crystal',   reward: 50,
+    check: () => save.stats.pickups >= 1 },
+  { id: 'first-dock',  cat: 'prog', name: 'PORT OF CALL',   desc: 'Dock at the station',               reward: 100,
+    check: () => save.stats.docks >= 1 },
+  { id: 'first-upgrade', cat: 'prog', name: 'REQUISITION',  desc: 'Purchase a ship upgrade',           reward: 100,
+    check: () => Object.values(save.upgrades).some(v => v > 0) },
+  { id: 'weapon-swap', cat: 'prog', name: 'FULL ARSENAL',   desc: 'Use all 3 weapons in one mission',  reward: 100,
+    check: () => !!mission.weaponsUsed && mission.weaponsUsed.size >= 3 },
+  { id: 'm-sweep',     cat: 'prog', name: 'SECTOR CLEARED', desc: 'Complete operation SECTOR SWEEP',   reward: 150,
+    check: () => save.missionsCleared.includes('sweep') },
+  { id: 'm-defense',  cat: 'prog', name: 'LINE HELD',       desc: 'Complete operation STATION DEFENSE', reward: 200,
+    check: () => save.missionsCleared.includes('defense') },
+  { id: 'm-ace',       cat: 'prog', name: 'KINGSLAYER',     desc: 'Complete operation ACE HUNT',       reward: 250,
+    check: () => save.missionsCleared.includes('ace') },
+  { id: 'm-flagship',  cat: 'prog', name: "WAR'S END",      desc: 'Win the campaign finale',           reward: 500,
+    check: () => save.campaignDone },
+  // --- COMBAT — cumulative career milestones ---
+  { id: 'kills-bronze', cat: 'combat', name: 'MARKSMAN',      desc: '50 lifetime kills',   reward: 100,
+    check: () => save.stats.kills >= 50,   progress: () => [save.stats.kills, 50] },
+  { id: 'kills-silver', cat: 'combat', name: 'GUN FOR HIRE',  desc: '500 lifetime kills',  reward: 300,
+    check: () => save.stats.kills >= 500,  progress: () => [save.stats.kills, 500] },
+  { id: 'kills-gold',   cat: 'combat', name: 'ANGEL OF DEATH', desc: '2500 lifetime kills', reward: 1000,
+    check: () => save.stats.kills >= 2500, progress: () => [save.stats.kills, 2500] },
+  { id: 'run-rampage',  cat: 'combat', name: 'RAMPAGE',       desc: '25 kills in a single run',   reward: 150,
+    check: () => kills >= 25 },
+  { id: 'run-massacre', cat: 'combat', name: 'MASSACRE',      desc: '100 kills in a single run',  reward: 400,
+    check: () => kills >= 100 },
+  { id: 'boss-cruiser', cat: 'combat', name: 'CAPITAL OFFENSE', desc: 'Destroy a CRUISER',        reward: 200,
+    check: () => save.stats.typesKilled.includes('cruiser') },
+  { id: 'boss-dread',   cat: 'combat', name: 'TITANFALL',     desc: 'Destroy a DREADNOUGHT',      reward: 500,
+    check: () => save.stats.typesKilled.includes('dreadnought') },
+  { id: 'bestiary',     cat: 'combat', name: 'XENOLOGY',      desc: 'Destroy every enemy type',   reward: 500,
+    check: () => save.stats.typesKilled.length >= 7, progress: () => [save.stats.typesKilled.length, 7] },
+  // --- MASTERY — skill ceilings ---
+  { id: 'score-ace',    cat: 'mastery', name: 'ACE PILOT',  desc: '10,000 points in one run',  reward: 200,
+    check: () => score >= 10000 },
+  { id: 'score-legend', cat: 'mastery', name: 'LEGEND',     desc: '50,000 points in one run',  reward: 500,
+    check: () => score >= 50000 },
+  { id: 'score-myth',   cat: 'mastery', name: 'MYTHIC',     desc: '150,000 points in one run', reward: 1500,
+    check: () => score >= 150000 },
+  { id: 'wave-5',       cat: 'mastery', name: 'HARDENED',   desc: 'Survive 5 waves in one run',  reward: 100,
+    check: () => wave >= 6 },
+  { id: 'wave-15',      cat: 'mastery', name: 'RELENTLESS', desc: 'Survive 15 waves in one run', reward: 300,
+    check: () => wave >= 16 },
+  { id: 'wave-25',      cat: 'mastery', name: 'UNYIELDING', desc: 'Survive 25 waves in one run', reward: 800,
+    check: () => wave >= 26 },
+  { id: 'fully-loaded', cat: 'mastery', name: 'PEAK CONDITION', desc: 'Max out every ship upgrade', reward: 1000,
+    check: () => UPGRADES.every(u => (save.upgrades[u.id] || 0) >= u.max),
+    progress: () => [UPGRADES.reduce((s, u) => s + Math.min(save.upgrades[u.id] || 0, u.max), 0),
+                     UPGRADES.reduce((s, u) => s + u.max, 0)] },
+  { id: 'rich',         cat: 'mastery', name: 'WAR PROFITEER', desc: 'Bank 10,000 credits', reward: 300,
+    check: () => save.credits >= 10000, progress: () => [save.credits, 10000] },
+  // --- CHALLENGE — deliberate, hard-won runs ---
+  { id: 'def-flawless', cat: 'challenge', name: 'IMMOVABLE', desc: 'Win STATION DEFENSE with the station above 80% hull', reward: 400,
+    check: ctx => ctx.event === 'mission' && mission.def && mission.def.type === 'defense'
+                  && mission.stationHull / mission.stationMaxHull >= 0.8 },
+  { id: 'untouchable',  cat: 'challenge', name: 'UNTOUCHABLE', desc: 'Complete a mission without taking hull damage', reward: 400,
+    check: ctx => ctx.event === 'mission' && mission.hullDamageTaken <= 0 },
+  { id: 'streak-15',    cat: 'challenge', name: 'ON A ROLL',  desc: '15 kills without taking hull damage', reward: 250,
+    check: () => combatStreak >= 15 },
+  { id: 'ace-clean',    cat: 'challenge', name: 'DUELIST',    desc: 'Destroy the ACE before taking any hull damage', reward: 400,
+    check: ctx => ctx.event === 'kill' && ctx.e && ctx.e.isAce && mission.hullDamageTaken <= 0 },
+  { id: 'survivor',     cat: 'challenge', name: 'BY A THREAD', desc: 'Complete a mission with hull at or below 10%', reward: 300,
+    check: ctx => ctx.event === 'mission' && player.hull > 0 && player.hull / player.maxHull <= 0.10 },
+  // --- SECRET — hidden until earned ---
+  { id: 'glass-cannon', cat: 'secret', name: 'GLASS CANNON', desc: 'Destroy a capital ship with shields fully down', reward: 300, secret: true,
+    check: ctx => ctx.event === 'kill' && ctx.e && ctx.e.isBoss && player.shield <= 0 },
+  { id: 'collector',    cat: 'secret', name: 'PACK RAT',     desc: 'Collect 250 loot crystals', reward: 300, secret: true,
+    check: () => save.stats.pickups >= 250, progress: () => [save.stats.pickups, 250] },
+];
+const ACH_CATS = [
+  { id: 'prog',      name: 'PROGRESSION' },
+  { id: 'combat',    name: 'COMBAT' },
+  { id: 'mastery',   name: 'MASTERY' },
+  { id: 'challenge', name: 'CHALLENGE' },
+  { id: 'secret',    name: 'CLASSIFIED' },
+];
+
+function showToast(textOrEl, color = '#00ff66') {
+  const el = (typeof textOrEl === 'string') ? (() => {
+    const d = document.createElement('div');
+    d.className = 'toast';
+    d.textContent = textOrEl;
+    d.style.color = color;
+    d.style.borderColor = color;
+    return d;
+  })() : textOrEl;
   document.getElementById('toasts').appendChild(el);
   setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateY(12px)'; }, 2700);
   setTimeout(() => el.remove(), 3500);
 }
-function unlock(id, name, desc) {
-  if (save.unlocked.includes(id)) return;
-  save.unlocked.push(id);
+
+function unlockAchievement(a) {
+  if (save.achievements[a.id]) return;
+  save.achievements[a.id] = true;
+  save.credits += a.reward;
   persistSave();
-  showToast(`✓ ${name} — ${desc}`, '#ffcc44');
+  updateCreditsHUD();
+  playAchievement();
+  const el = document.createElement('div');
+  el.className = 'toast ach';
+  el.innerHTML =
+    `<div class="ach-toast-top">★ ACHIEVEMENT UNLOCKED</div>` +
+    `<div class="ach-toast-name">${a.name}</div>` +
+    `<div class="ach-toast-desc">${a.desc}</div>` +
+    `<div class="ach-toast-rew">+${a.reward} cr</div>`;
+  showToast(el);
+}
+
+// Evaluate every locked achievement against the current state. Safe to call
+// liberally — `check` failures are swallowed and unlocks are idempotent.
+function evaluateAchievements(ctx) {
+  ctx = ctx || {};
+  if (ctx.event === undefined) ctx.event = '';
+  for (const a of ACHIEVEMENTS) {
+    if (save.achievements[a.id]) continue;
+    let earned = false;
+    try { earned = !!a.check(ctx); } catch (err) { earned = false; }
+    if (earned) unlockAchievement(a);
+  }
+}
+
+// Log a weapon as fired this mission; re-evaluate only when the set grows.
+function recordWeaponUse(w) {
+  if (!mission.active || !mission.weaponsUsed) return;
+  const n = mission.weaponsUsed.size;
+  mission.weaponsUsed.add(w);
+  if (mission.weaponsUsed.size !== n) evaluateAchievements({ event: 'weapon' });
 }
 
 function rewardKill(e) {
@@ -1412,24 +1596,14 @@ function rewardKill(e) {
   // periodic save (avoid hammering localStorage)
   if (kills % 5 === 0) persistSave();
   updateCreditsHUD();
-  if (kills === 1)   unlock('first-kill', 'FIRST BLOOD', 'First kill');
-  if (kills === 25)  unlock('rampage',    'RAMPAGE',     '25 destroyed');
-  if (kills === 100) unlock('massacre',   'MASSACRE',    '100 targets in one run');
-  if (e.isBoss)      unlock('boss-' + wave, `BOSS WAVE ${wave}`, 'Capital ship destroyed');
-  if (score >= 10000 && !save.unlocked.includes('ace'))
-    unlock('ace', 'ACE PILOT', '10,000 points in one run');
-  if (score >= 50000 && !save.unlocked.includes('legend'))
-    unlock('legend', 'LEGEND', '50,000 points');
 }
 
 function onWaveComplete() {
   const completed = wave - 1; // wave was already ++'d before this call
-  if (completed === 5)  unlock('wave5',  'WAVE 5',   'First boss wave cleared');
-  if (completed === 10) unlock('wave10', 'VETERAN',  'Ten waves survived');
-  if (completed === 20) unlock('wave20', 'IMMORTAL', 'Twenty waves');
   if (score > save.highScore) save.highScore = score;
   persistSave();
   showToast(`WAVE ${completed} CLEAR · +3 MSL`, '#00ff66');
+  evaluateAchievements({ event: 'wave' });
 }
 
 // ====== SHOP UI ======
@@ -1469,6 +1643,56 @@ function showHelp() {
 }
 function closeHelp() {
   document.getElementById('help-overlay').style.display = 'none';
+}
+// ACHIEVEMENTS — career service record, same top-layer pattern.
+function showAchievements() {
+  document.getElementById('ach-overlay').style.display = 'flex';
+  if (document.pointerLockElement) document.exitPointerLock();
+  renderAchievements();
+}
+function closeAchievements() {
+  document.getElementById('ach-overlay').style.display = 'none';
+}
+function renderAchievements() {
+  const total = ACHIEVEMENTS.length;
+  const earned = ACHIEVEMENTS.filter(a => save.achievements[a.id]);
+  document.getElementById('ach-summary').innerHTML =
+    `UNLOCKED <span class="ach-gold">${earned.length}/${total}</span>` +
+    ` · BOUNTY EARNED <span class="ach-gold">${earned.reduce((s, a) => s + a.reward, 0)} cr</span>`;
+  const list = document.getElementById('ach-list');
+  list.innerHTML = '';
+  for (const cat of ACH_CATS) {
+    const inCat = ACHIEVEMENTS.filter(a => a.cat === cat.id);
+    if (!inCat.length) continue;
+    const catDone = inCat.filter(a => save.achievements[a.id]).length;
+    const head = document.createElement('div');
+    head.className = 'ach-cat';
+    head.textContent = `${cat.name}  ·  ${catDone}/${inCat.length}`;
+    list.appendChild(head);
+    for (const a of inCat) {
+      const unlocked = !!save.achievements[a.id];
+      const hidden = a.secret && !unlocked;
+      const row = document.createElement('div');
+      row.className = 'ach-row ' + (unlocked ? 'done' : 'locked');
+      const name = hidden ? '? ? ?' : a.name;
+      const desc = hidden ? 'Hidden — discover this one in battle' : a.desc;
+      let progHtml = '';
+      if (!unlocked && !hidden && a.progress) {
+        let cur = 0, goal = 1;
+        try { const p = a.progress(); cur = p[0]; goal = p[1]; } catch {}
+        cur = Math.max(0, Math.min(cur, goal));
+        const pct = goal > 0 ? Math.floor(cur / goal * 100) : 0;
+        progHtml = `<div class="ach-bar"><div style="width:${pct}%"></div></div>` +
+                   `<div class="ach-prog-txt">${cur} / ${goal}</div>`;
+      }
+      row.innerHTML =
+        `<div class="ach-icon">${unlocked ? '★' : (hidden ? '?' : '☆')}</div>` +
+        `<div class="ach-body"><div class="ach-name">${name}</div>` +
+        `<div class="ach-desc">${desc}</div>${progHtml}</div>` +
+        `<div class="ach-reward">${unlocked ? '✓' : '+' + a.reward + ' cr'}</div>`;
+      list.appendChild(row);
+    }
+  }
 }
 function renderSettings() {
   const list = document.getElementById('settings-list');
@@ -1513,6 +1737,9 @@ document.getElementById('mb-ms-help').addEventListener('click', e => { e.stopPro
 document.getElementById('mb-shop-close').addEventListener('click', e => { e.stopPropagation(); closeShop(); });
 document.getElementById('mb-help').addEventListener('click', e => { e.stopPropagation(); showHelp(); });
 document.getElementById('mb-help-back').addEventListener('click', e => { e.stopPropagation(); closeHelp(); });
+document.getElementById('mb-ach').addEventListener('click', e => { e.stopPropagation(); showAchievements(); });
+document.getElementById('mb-ms-ach').addEventListener('click', e => { e.stopPropagation(); showAchievements(); });
+document.getElementById('mb-ach-back').addEventListener('click', e => { e.stopPropagation(); closeAchievements(); });
 function renderShop() {
   document.getElementById('shop-credits').textContent = save.credits;
   const list = document.getElementById('shop-list');
@@ -1587,6 +1814,23 @@ function playDockSound() {
     g.gain.exponentialRampToValueAtTime(0.001, start + 0.3);
     osc.connect(g).connect(masterGain);
     osc.start(start); osc.stop(start + 0.34);
+  });
+}
+// Bright rising arpeggio — the achievement fanfare.
+function playAchievement() {
+  if (!audioCtx) return;
+  const t = audioCtx.currentTime;
+  [523, 659, 784, 1047].forEach((freq, i) => {
+    const osc = audioCtx.createOscillator();
+    osc.type = 'square';
+    osc.frequency.value = freq;
+    const g = audioCtx.createGain();
+    const start = t + i * 0.085;
+    g.gain.setValueAtTime(0.0001, start);
+    g.gain.exponentialRampToValueAtTime(0.11, start + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.001, start + 0.32);
+    osc.connect(g).connect(masterGain);
+    osc.start(start); osc.stop(start + 0.36);
   });
 }
 
@@ -1901,6 +2145,8 @@ function updatePickups(dt) {
       t.apply();
       showToast(t.label, '#' + t.color.toString(16).padStart(6, '0'));
       playPickup();
+      save.stats.pickups++;
+      evaluateAchievements({ event: 'pickup' });
       scene.remove(p.obj); disposeObject(p.obj);
       pickups.splice(i, 1);
       continue;
@@ -2156,6 +2402,7 @@ addEventListener('keydown', e => {
   if (CAPTURED_KEYS.has(e.code)) e.preventDefault();
   if (e.code === 'Escape') {
     if (document.getElementById('help-overlay').style.display === 'flex') { closeHelp(); return; }
+    if (document.getElementById('ach-overlay').style.display === 'flex') { closeAchievements(); return; }
     if (document.getElementById('settings-overlay').style.display === 'flex') { closeSettings(); return; }
     if (document.getElementById('shop-overlay').style.display === 'flex') { closeShop(); return; }
     if (started && player.hull > 0 && !paused) pauseGame();
@@ -2329,6 +2576,7 @@ let paused = false;
 let wave = 1;
 let kills = 0;
 let score = 0;
+let combatStreak = 0;   // consecutive kills in this run with no hull damage
 let overlayMode = 'title'; // 'title' | 'pause' | 'missionend'
 const overlay = document.getElementById('overlay');
 const overlayBox = overlay.querySelector('.box');
@@ -2384,6 +2632,8 @@ const mission = {
   stationMaxHull: 600, stationHull: 600,
   phase: 0, spawnTimer: 0,
   flagshipAdds: 0,        // escort reinforcement waves spawned in the finale
+  hullDamageTaken: 0,     // total hull damage this mission — drives no-hit achievements
+  weaponsUsed: null,      // Set of weapon indices fired this mission
 };
 let missionToken = 0; // invalidates pending setTimeout spawns across missions
 
@@ -2410,7 +2660,7 @@ function resetWorld() {
   player.dockLockout = false;
   player.asteroidHitCd = 0;
   player.trail.initialized = false;
-  wave = 1; kills = 0; score = 0;
+  wave = 1; kills = 0; score = 0; combatStreak = 0;
 }
 
 function showMissionSelect() {
@@ -2453,6 +2703,8 @@ function beginMission(def) {
   mission.phase = 0;
   mission.flagshipAdds = 0;
   mission.spawnTimer = 10;   // first bomber reinforcement at t≈10s
+  mission.hullDamageTaken = 0;
+  mission.weaponsUsed = new Set();
   missionToken++;            // invalidate any setTimeout from a prior mission
 
   missionOverlay.style.display = 'none';
@@ -2587,7 +2839,11 @@ function destroyEnemy(e, idx) {
   enemies.splice(idx, 1);
   kills++;
   score += e.score;
+  combatStreak++;
+  save.stats.kills++;
+  if (e.type && !save.stats.typesKilled.includes(e.type)) save.stats.typesKilled.push(e.type);
   rewardKill(e);
+  evaluateAchievements({ event: 'kill', e });
   onEnemyKilled(e);
   if (enemies.length === 0) onAllEnemiesCleared();
 }
@@ -2665,8 +2921,9 @@ function missionComplete() {
   if (def.campaign && !save.missionsCleared.includes(def.id)) {
     save.missionsCleared.push(def.id);
   }
+  if (def.finale) save.campaignDone = true;
+  evaluateAchievements({ event: 'mission' });
   if (def.finale) {
-    save.campaignDone = true;
     showEnding();
     playDockSound();
     return;
@@ -2927,6 +3184,7 @@ function updatePlayer(dt) {
       if (player.target && player.missileAmmo > 0) {
         player.fireCooldown = w.cooldown * pm.fireCD;
         player.missileAmmo--;
+        recordWeaponUse(player.weapon);
         const origin = player.obj.position.clone().addScaledVector(upVec, -0.4);
         spawnMissile(origin, dir, player.target, w.damage * player.damageMult * pm.dmgMult);
         addShake(0.12);
@@ -2934,6 +3192,7 @@ function updatePlayer(dt) {
     } else if (player.energy >= w.energy) {
       player.fireCooldown = w.cooldown * pm.fireCD;
       player.energy -= w.energy;
+      recordWeaponUse(player.weapon);
       const dmg = w.damage * player.damageMult * pm.dmgMult;
       if (w.dual) {
         spawnBullet(player.obj.position.clone().add(offR).add(offU), dir, 'player', w.projSpeed, dmg, w.color);
@@ -3247,6 +3506,8 @@ function damagePlayer(amount) {
   if (amount > 0) {
     player.hull -= amount;
     usedHull = true;
+    mission.hullDamageTaken += amount;
+    combatStreak = 0;   // hull hit breaks the no-damage kill streak
   }
   flashDamage();
   if (usedShield) playShieldHit();
@@ -3268,6 +3529,8 @@ function gameOver() {
   spawnExplosion(player.obj.position.clone(), C_PLAYER, 3);
   addShake(2);
   document.body.classList.remove('hull-critical');
+  save.stats.deaths++;
+  persistSave();
   // Player death = mission failed.
   missionFailed('SHIP DESTROYED');
 }
@@ -3347,6 +3610,8 @@ function updateStation(dt) {
       player.missileAmmo = player.maxMissileAmmo;
       playDockSound();
       showToast('DOCKED — SYSTEMS RESTORED', '#66aaff');
+      save.stats.docks++;
+      evaluateAchievements({ event: 'dock' });
       openShop();
     }
   } else {
