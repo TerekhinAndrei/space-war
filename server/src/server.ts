@@ -694,10 +694,14 @@ export default class SpaceWarRoom implements Party.Server {
     forwardFromQuat(fwd, ps.quat);
     const right: Vec3 = { x: 0, y: 0, z: 0 };
     rightFromQuat(right, ps.quat);
+    // Bullet velocity is pure projSpeed along forward — we deliberately
+    // do NOT inherit the shooter's velocity, so the client-side lead
+    // indicator (which assumes projSpeed) stays accurate. Same model as
+    // single-player.
     const v = w.projSpeed;
-    const baseVx = ps.vel.x + fwd.x * v;
-    const baseVy = ps.vel.y + fwd.y * v;
-    const baseVz = ps.vel.z + fwd.z * v;
+    const baseVx = fwd.x * v;
+    const baseVy = fwd.y * v;
+    const baseVz = fwd.z * v;
     const positions: Vec3[] = w.dual
       ? [
           { x: ps.pos.x + right.x * 0.7, y: ps.pos.y + right.y * 0.7, z: ps.pos.z + right.z * 0.7 },

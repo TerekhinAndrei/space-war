@@ -3194,6 +3194,19 @@ function leadPoint(shooterPos, targetPos, targetVel, projSpeed, out) {
   }
   return out;
 }
+// PvP variant: adds a fixed `latency` (seconds) on top of bullet flight
+// time, so the predicted point accounts for input-send + server-tick +
+// snapshot-interp lag. Without this the reticle aims where the bullet
+// would meet the target's CURRENT velocity over pure flight time only,
+// and shots whiff against a moving opponent.
+function pvpLeadPoint(shooterPos, targetPos, targetVel, projSpeed, latency, out) {
+  out.copy(targetPos);
+  for (let i = 0; i < 3; i++) {
+    const t = leadTmp.copy(out).sub(shooterPos).length() / projSpeed + latency;
+    out.copy(targetPos).addScaledVector(targetVel, t);
+  }
+  return out;
+}
 
 let reinforceTimer = 0;
 // A spawn point out at the combat-zone perimeter in direction `dir` from
@@ -5156,8 +5169,16 @@ function updateLeadIndicator() {
   if (player.obj.position.distanceTo(player.target.obj.position) > maxRange) {
     leadEl.classList.remove('active'); return;
   }
-  // Where to aim so a player shot reaches the target.
-  leadPoint(player.obj.position, player.target.obj.position, player.target.velocity, PLAYER_PROJ_SPEED, projTmp);
+  // In PvP we also fold in network latency + snapshot interpolation lag,
+  // so the reticle predicts where the target will ACTUALLY be when the
+  // server-side bullet meets them (not just where it'd be after pure
+  // bullet flight from the shooter's local frame).
+  if (gameMode === 'pvp') {
+    const latS = ((MP.rtt || 120) / 2 + 50) / 1000;
+    pvpLeadPoint(player.obj.position, player.target.obj.position, player.target.velocity, PLAYER_PROJ_SPEED, latS, projTmp);
+  } else {
+    leadPoint(player.obj.position, player.target.obj.position, player.target.velocity, PLAYER_PROJ_SPEED, projTmp);
+  }
   const v = projTmp.clone().project(camera);
   if (v.z > 1 || v.z < -1) { leadEl.classList.remove('active'); return; }
   if (Math.abs(v.x) > 1 || Math.abs(v.y) > 1) { leadEl.classList.remove('active'); return; }
