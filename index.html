@@ -405,6 +405,41 @@
   }
   .set-opt:hover { background: rgba(0,255,102,0.15); }
   .set-opt.sel { background: rgba(0,255,102,0.32); box-shadow: 0 0 12px rgba(0,255,102,0.5); }
+  /* Slider row — used for continuous settings like mouse sensitivity. */
+  .set-slider {
+    display: flex; align-items: center; gap: 12px; pointer-events: auto;
+    min-width: 220px;
+  }
+  .set-slider input[type="range"] {
+    -webkit-appearance: none; appearance: none;
+    width: 180px; height: 14px;
+    background: rgba(0,30,10,0.6); border: 1px solid #00ff66;
+    box-shadow: inset 0 0 6px rgba(0,255,102,0.3);
+    outline: none; cursor: pointer;
+  }
+  .set-slider input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 14px; height: 22px;
+    background: #00ff66; border: 1px solid #00ff66;
+    box-shadow: 0 0 10px #00ff66; cursor: pointer;
+  }
+  .set-slider input[type="range"]::-moz-range-thumb {
+    width: 14px; height: 22px;
+    background: #00ff66; border: 1px solid #00ff66;
+    box-shadow: 0 0 10px #00ff66; cursor: pointer;
+  }
+  .set-slider .set-val {
+    color: #00ff66; text-shadow: 0 0 6px #00ff66;
+    font-family: 'Courier New', monospace; font-size: 13px;
+    min-width: 46px; text-align: right;
+  }
+  .set-slider .set-reset {
+    padding: 4px 8px; border: 1px solid #00ff66; cursor: pointer;
+    color: #00ff66; font-family: 'Courier New', monospace; font-size: 10px;
+    background: rgba(0,30,10,0.4); text-shadow: 0 0 4px #00ff66;
+    letter-spacing: 1px;
+  }
+  .set-slider .set-reset:hover { background: rgba(0,255,102,0.15); }
   /* Start-menu buttons */
   .menu-btns { display: flex; flex-direction: column; gap: 10px; margin: 22px auto 6px; max-width: 300px; }
   .menu-btn {
@@ -1929,14 +1964,19 @@ function renderSettings() {
   const list = document.getElementById('settings-list');
   list.innerHTML = '';
   const rows = [
-    { label: 'GRAPHICS', cur: save.settings.graphics,
+    { kind: 'pick', label: 'GRAPHICS', cur: save.settings.graphics,
       opts: [['HIGH','high'],['MEDIUM','medium'],['LOW','low']],
       apply: v => { save.settings.graphics = v; applyGraphics(); } },
-    { label: 'SOUND', cur: save.settings.mute,
+    { kind: 'pick', label: 'SOUND', cur: save.settings.mute,
       opts: [['ON',false],['OFF',true]],
       apply: v => setMuted(v) },
-    { label: 'SENSITIVITY', cur: save.settings.sensitivity,
-      opts: [['0.5×',0.5],['0.75×',0.75],['1.0×',1],['1.5×',1.5],['2.0×',2]],
+    // Mouse sensitivity is a smooth slider — discrete steps left players
+    // stuck between 1.0× and 1.5×. Range covers tablet trackpads to
+    // high-DPI gaming mice.
+    { kind: 'slider', label: 'MOUSE SENS',
+      cur: save.settings.sensitivity,
+      min: 0.2, max: 3.0, step: 0.05, def: 1.0,
+      fmt: v => v.toFixed(2) + '×',
       apply: v => { save.settings.sensitivity = v; } },
   ];
   for (const r of rows) {
@@ -1945,17 +1985,52 @@ function renderSettings() {
     const label = document.createElement('div');
     label.className = 'set-label';
     label.textContent = r.label;
-    const opts = document.createElement('div');
-    opts.className = 'set-opts';
-    for (const [txt, val] of r.opts) {
-      const o = document.createElement('div');
-      o.className = 'set-opt' + (val === r.cur ? ' sel' : '');
-      o.textContent = txt;
-      o.addEventListener('click', () => { r.apply(val); persistSave(); renderSettings(); });
-      opts.appendChild(o);
-    }
     row.appendChild(label);
-    row.appendChild(opts);
+
+    if (r.kind === 'slider') {
+      const wrap = document.createElement('div');
+      wrap.className = 'set-slider';
+      const slider = document.createElement('input');
+      slider.type = 'range';
+      slider.min = r.min;
+      slider.max = r.max;
+      slider.step = r.step;
+      slider.value = r.cur;
+      const val = document.createElement('span');
+      val.className = 'set-val';
+      val.textContent = r.fmt(parseFloat(slider.value));
+      const reset = document.createElement('div');
+      reset.className = 'set-reset';
+      reset.textContent = 'RESET';
+      slider.addEventListener('input', () => {
+        const v = parseFloat(slider.value);
+        val.textContent = r.fmt(v);
+        r.apply(v);
+        persistSave();
+      });
+      reset.addEventListener('click', () => {
+        slider.value = r.def;
+        const v = parseFloat(slider.value);
+        val.textContent = r.fmt(v);
+        r.apply(v);
+        persistSave();
+      });
+      wrap.appendChild(slider);
+      wrap.appendChild(val);
+      wrap.appendChild(reset);
+      row.appendChild(wrap);
+    } else {
+      const opts = document.createElement('div');
+      opts.className = 'set-opts';
+      for (const [txt, value] of r.opts) {
+        const o = document.createElement('div');
+        o.className = 'set-opt' + (value === r.cur ? ' sel' : '');
+        o.textContent = txt;
+        o.addEventListener('click', () => { r.apply(value); persistSave(); renderSettings(); });
+        opts.appendChild(o);
+      }
+      row.appendChild(opts);
+    }
     list.appendChild(row);
   }
 }
