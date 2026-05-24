@@ -210,14 +210,15 @@
   /* ----- PvP IN-MATCH HUD ----- */
   #pvp-hud { display: none; pointer-events: none; }
   body.pvp #pvp-hud { display: block; }
-  /* Hide single-player HUD panels while in a match — the PvP HUD above
-     provides its own bars, score and labels. Keep #crosshair so the
-     player can aim, keep #cockpit-frame / #cockpit-vignette for visual
-     continuity, and keep #zone-warning so the boundary alert works
-     identically to single-player. */
+  /* Hide single-player HUD panels that don't apply (mission-stats, target
+     panel, position readout, mission objective, dock prompt). Keep the
+     crosshair, lead-target reticle, radar, cockpit frame, vignette and
+     zone-warning so every combat assist a pilot sees in single-player is
+     present here too — the PvP HUD only adds match-specific overlays
+     (timer, kill feed, scoreboard, callsign labels). */
   body.pvp #top-left, body.pvp #top-right, body.pvp #bottom-left,
-  body.pvp #bottom-right, body.pvp #radar, body.pvp #mission-hud,
-  body.pvp #lead, body.pvp #dock-prompt { display: none !important; }
+  body.pvp #bottom-right, body.pvp #mission-hud,
+  body.pvp #dock-prompt { display: none !important; }
   #pvp-top {
     position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
     color: #00ff66; font-family: 'Courier New', monospace; text-align: center;
@@ -681,6 +682,8 @@
     <div class="row"><span class="label">SHLD</span><div class="bar"><div id="pvp-shield-bar" style="width:100%;background:#66aaff"></div></div></div>
     <div class="row"><span class="label">ENRG</span><div class="bar"><div id="pvp-energy-bar" style="width:100%;background:#aaff66"></div></div></div>
     <div class="row" style="margin-top:8px;font-size:11px;opacity:0.7">WPN: <span id="pvp-weapon-name">LASER</span></div>
+    <div class="row" style="font-size:11px;opacity:0.7">MSL: <span id="pvp-msl-ammo">0</span></div>
+    <div class="row" style="font-size:11px;opacity:0.7">TGT: <span id="pvp-target-name">— no lock —</span></div>
   </div>
   <div id="pvp-rightpanel">
     <div>KILLS · DEATHS</div>
@@ -2149,8 +2152,9 @@ const PVP = {
   matchEndsAt: 0,
   countdownEndsAt: 0,
   killLimit: NET.MATCH_KILL_LIMIT,
-  players: new Map(),       // id -> { callsign, color, hexColor, obj, trail, labelEl }
+  players: new Map(),       // id -> { callsign, color, hexColor, obj, trail, labelEl, velocity, ... }
   bullets: new Map(),       // id -> Object3D
+  missiles: new Map(),      // id -> Object3D
   snapPrev: null,           // for interpolation
   snapCur: null,
   killfeed: [],             // {text, until} entries
@@ -2231,6 +2235,8 @@ function pvpExit() {
   PVP.players.clear();
   for (const [id, b] of PVP.bullets) { scene.remove(b); }
   PVP.bullets.clear();
+  for (const [id, m] of PVP.missiles) { scene.remove(m); disposeObject(m); }
+  PVP.missiles.clear();
   PVP.snapPrev = null;
   PVP.snapCur = null;
   document.body.classList.remove('pvp', 'dead', 'sb');
@@ -2257,9 +2263,13 @@ function pvpEnsureShip(id, callsign, color) {
   labelEl.innerHTML = `<div class="pvp-name">${escMP(callsign)}</div><div class="pvp-hbar"><div style="width:100%"></div></div>`;
   if (local) labelEl.style.display = 'none';
   document.getElementById('pvp-labels').appendChild(labelEl);
-  const entry = { id, callsign, color, hexColor: hex, obj, trail, labelEl, local,
-                  hull: NET.SHIP_HULL, shield: NET.SHIP_SHIELD, energy: NET.SHIP_ENERGY,
-                  alive: true, kills: 0, deaths: 0, score: 0, invulnUntilTick: 0 };
+  const entry = {
+    id, callsign, color, hexColor: hex, obj, trail, labelEl, local,
+    velocity: new THREE.Vector3(),    // mirror of server vel — read by lead prediction + radar
+    hull: NET.SHIP_HULL, shield: NET.SHIP_SHIELD, energy: NET.SHIP_ENERGY,
+    missileAmmo: NET.MISSILE_AMMO_MAX,
+    alive: true, kills: 0, deaths: 0, score: 0, invulnUntilTick: 0,
+  };
   PVP.players.set(id, entry);
   return entry;
 }
@@ -2298,17 +2308,23 @@ function pvpPlayFireFx(f) {
   const pos = ps && ps.obj ? ps.obj.position : new THREE.Vector3(f.pos.x, f.pos.y, f.pos.z);
   const w = NET.WEAPONS[f.weapon] || NET.WEAPONS[0];
   try {
-    if (w && w.id === 'pulse') playPulse(pos);
+    if (w && w.id === 'missile' && typeof playMissileLaunch === 'function') playMissileLaunch(pos);
+    else if (w && w.id === 'pulse') playPulse(pos);
     else playLaser(pos);
   } catch {}
-  if (f.shooter === PVP.myId && typeof addShake === 'function') addShake(0.04);
+  if (f.shooter === PVP.myId && typeof addShake === 'function') {
+    addShake(w && w.id === 'missile' ? 0.12 : 0.04);
+  }
 }
 
 function pvpPlayHitFx(h) {
-  // Small spark explosion at the hit point, plus a hull/shield SFX on the
-  // local player so getting shot feels like getting shot.
+  // Spark explosion at the impact point — sized by weapon so missile hits
+  // read clearly. Plus a hull/shield SFX on the local player so getting
+  // shot feels like getting shot.
   if (typeof spawnExplosion === 'function') {
-    spawnExplosion(new THREE.Vector3(h.pos.x, h.pos.y, h.pos.z), 0xffcc44, 0.4);
+    const isMsl = h.weapon === 2;
+    spawnExplosion(new THREE.Vector3(h.pos.x, h.pos.y, h.pos.z),
+                   isMsl ? 0xffaa44 : 0xffcc44, isMsl ? 1.4 : 0.4);
   }
   if (h.victim === PVP.myId) {
     const me = PVP.players.get(PVP.myId);
@@ -2407,11 +2423,13 @@ function pvpRenderFromSnapshots() {
     ps.hull = cur.hull;
     ps.shield = cur.shield;
     ps.energy = cur.energy;
+    if (typeof cur.missileAmmo === 'number') ps.missileAmmo = cur.missileAmmo;
     ps.kills = cur.kills;
     ps.deaths = cur.deaths;
     ps.score = cur.score;
     ps.invulnUntilTick = cur.invulnUntilTick;
     ps.alive = cur.alive;
+    ps.velocity.set(cur.vel.x, cur.vel.y, cur.vel.z);
     if (!cur.alive) {
       // Hide ship while dead. Trail naturally stops drawing.
       if (ps.obj) ps.obj.visible = false;
@@ -2491,6 +2509,38 @@ function pvpRenderFromSnapshots() {
       PVP.bullets.delete(id);
     }
   }
+
+  // ---- Missiles ----
+  const missileSeen = new Set();
+  const prevMissiles = PVP.snapPrev && PVP.snapPrev.missiles
+    ? new Map(PVP.snapPrev.missiles.map(m => [m.id, m])) : null;
+  const curMissiles = PVP.snapCur.missiles || [];
+  for (const cm of curMissiles) {
+    missileSeen.add(cm.id);
+    let obj = PVP.missiles.get(cm.id);
+    if (!obj) {
+      obj = buildMissile(0xffaa66);
+      scene.add(obj);
+      PVP.missiles.set(cm.id, obj);
+    }
+    let mx = cm.pos.x, my = cm.pos.y, mz = cm.pos.z;
+    if (prevMissiles && frac < 1) {
+      const pm = prevMissiles.get(cm.id);
+      if (pm) {
+        mx = pm.pos.x + (cm.pos.x - pm.pos.x) * frac;
+        my = pm.pos.y + (cm.pos.y - pm.pos.y) * frac;
+        mz = pm.pos.z + (cm.pos.z - pm.pos.z) * frac;
+      }
+    }
+    obj.position.set(mx, my, mz);
+    obj.quaternion.set(cm.quat.x, cm.quat.y, cm.quat.z, cm.quat.w);
+  }
+  for (const [id, mesh] of PVP.missiles) {
+    if (!missileSeen.has(id)) {
+      scene.remove(mesh); disposeObject(mesh);
+      PVP.missiles.delete(id);
+    }
+  }
 }
 
 function pvpCameraFollow() {
@@ -2535,8 +2585,22 @@ function pvpRenderHUD() {
     document.getElementById('pvp-energy-bar').style.width = (Math.max(0, me.energy) / NET.SHIP_ENERGY * 100).toFixed(0) + '%';
     document.getElementById('pvp-k').textContent = me.kills;
     document.getElementById('pvp-d').textContent = me.deaths;
-    document.getElementById('pvp-weapon-name').textContent =
-      NET.WEAPONS[PVP.input.weapon || 0]?.id?.toUpperCase() || 'LASER';
+    const wIdx = player.weapon || 0;
+    const wpn = NET.WEAPONS[wIdx];
+    document.getElementById('pvp-weapon-name').textContent = wpn?.id?.toUpperCase() || 'LASER';
+    document.getElementById('pvp-msl-ammo').textContent =
+      `${me.missileAmmo ?? 0} / ${NET.MISSILE_AMMO_MAX}`;
+    const tgt = player.target;
+    const tgtEl = document.getElementById('pvp-target-name');
+    if (tgt && tgt.callsign) {
+      const inRange = me.obj && tgt.obj
+        ? me.obj.position.distanceTo(tgt.obj.position).toFixed(0)
+        : '?';
+      const lockState = (wIdx === 2) ? ' · LOCK' : '';
+      tgtEl.innerHTML = `<span style="color:${tgt.color}">${escMP(tgt.callsign)}</span> · ${inRange}u${lockState}`;
+    } else {
+      tgtEl.innerHTML = (wIdx === 2) ? '— SEEK TARGET —' : '— no lock —';
+    }
   }
   // Death respawn countdown — server respawnAtTick isn't directly time-based;
   // we estimate by saved time of death. For MVP, show a static "RESPAWNING..."
@@ -2623,6 +2687,7 @@ function pvpSendInput() {
   const fire  = !!(mouse.down || keys['Space'] || touch.fire);
   const wpn   = player.weapon || 0;
   PVP.input.seq++;
+  const targetId = (player.target && player.target.id) ? player.target.id : null;
   try {
     MP.ws.send(JSON.stringify({
       t: 'INPUT',
@@ -2632,6 +2697,7 @@ function pvpSendInput() {
       rollDelta:  PVP.input.rollAccum,
       thrustX, thrustZ, boost, brake,
       weapon: wpn, fire,
+      targetId,
       clientTime: Date.now(),
     }));
   } catch {}
@@ -2646,11 +2712,39 @@ function updatePvP(dt) {
   pvpRenderFromSnapshots();
   pvpCameraFollow();
   pvpUpdateZoneVisual();
+  pvpUpdateTarget();
   pvpRenderHUD();
+  if (typeof updateLeadIndicator === 'function') updateLeadIndicator();
+  if (typeof updateRadar === 'function') updateRadar();
   if (typeof updateEngineSound === 'function') updateEngineSound();
   if (typeof updateTrails === 'function') updateTrails(dt);
   if (typeof updateExplosions === 'function') updateExplosions(dt);
   if (typeof applyShake === 'function') applyShake(dt);
+}
+
+// Cone-based auto-target: same idea as single-player updateTarget but
+// scanning live PvP pilots instead of enemies[]. Sets player.target to
+// the chosen entry so the existing lead indicator + missile lock just
+// work. Missiles get a wider acquisition cone than lasers.
+const _pvpForward = new THREE.Vector3();
+const _pvpToTgt   = new THREE.Vector3();
+function pvpUpdateTarget() {
+  const me = PVP.myId ? PVP.players.get(PVP.myId) : null;
+  if (!me || !me.alive || !me.obj) { player.target = null; return; }
+  _pvpForward.set(0, 0, -1).applyQuaternion(me.obj.quaternion);
+  const missileMode = (player.weapon === 2);
+  const minDot = missileMode ? NET.MISSILE_LOCK_CONE : 0.7;
+  const maxR   = missileMode ? NET.MISSILE_LOCK_RANGE : 700;
+  let best = null, bestDot = minDot;
+  for (const [, ps] of PVP.players) {
+    if (ps.local || !ps.alive || !ps.obj) continue;
+    _pvpToTgt.copy(ps.obj.position).sub(me.obj.position);
+    const d = _pvpToTgt.length();
+    if (d > maxR) continue;
+    const dot = _pvpToTgt.normalize().dot(_pvpForward);
+    if (dot > bestDot) { bestDot = dot; best = ps; }
+  }
+  player.target = best;   // best.obj.position + best.velocity used by lead
 }
 
 // Re-creates the single-player combat-zone visuals (green wireframe sphere
@@ -4962,6 +5056,18 @@ function updateRadar() {
     }
   }
 
+  if (gameMode === 'pvp') {
+    // Plot every other live pilot, plus our missiles in flight so we can
+    // see them tracking. Locked target gets a ring.
+    const tgtId = player.target ? player.target.id : null;
+    for (const [, ps] of PVP.players) {
+      if (ps.local || !ps.alive || !ps.obj) continue;
+      const ring = ps.id === tgtId ? 6 : 0;
+      plot(ps.obj.position, ps.color || '#ff3344', ring);
+    }
+    for (const [, m] of PVP.missiles) plot(m.position, '#ffaa44');
+    return;
+  }
   for (const e of enemies) {
     let col = '#ff3344';
     let ring = 0;

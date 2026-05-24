@@ -39,6 +39,7 @@ interface InputMsg {
   brake: boolean;
   weapon: number;
   fire: boolean;
+  targetId: string | null;     // who the client's lead reticle is locked on
   clientTime: number;
 }
 type ClientMsg = PingMsg | JoinMsg | ReadyMsg | StartMsg | InputMsg | { t: string; [k: string]: unknown };
@@ -59,6 +60,7 @@ interface PlayerState {
   energy: number;
   fireCD: number;
   weapon: number;
+  missileAmmo: number;
   alive: boolean;
   respawnAtTick: number;
   invulnUntilTick: number;
@@ -77,6 +79,17 @@ interface Bullet {
   weapon: number;
 }
 
+interface Missile {
+  id: number;
+  owner: string;
+  targetId: string | null;
+  pos: Vec3;
+  vel: Vec3;
+  quat: Quat;
+  damage: number;
+  ttl: number;
+}
+
 interface LatestInput {
   yawDelta: number;
   pitchDelta: number;
@@ -87,6 +100,7 @@ interface LatestInput {
   brake: boolean;
   weapon: number;
   fire: boolean;
+  targetId: string | null;
   lastSeq: number;
   clientTime: number;
 }
@@ -129,9 +143,11 @@ export default class SpaceWarRoom implements Party.Server {
   private phase: MatchPhase = "WAITING";
   private tick = 0;
   private nextBulletId = 1;
+  private nextMissileId = 1;
   private players = new Map<string, PlayerState>();
   private inputs  = new Map<string, LatestInput>();
   private bullets: Bullet[] = [];
+  private missiles: Missile[] = [];
   private hitEventBuf: Array<{ shooter: string; victim: string; weapon: number; pos: Vec3 }> = [];
   private fireEventBuf: Array<{ shooter: string; weapon: number; pos: Vec3 }> = [];
   private killEventBuf: Array<{ killer: string | null; victim: string; weapon: number }> = [];
@@ -267,9 +283,11 @@ export default class SpaceWarRoom implements Party.Server {
 
     this.tick = 0;
     this.nextBulletId = 1;
+    this.nextMissileId = 1;
     this.players.clear();
     this.inputs.clear();
     this.bullets = [];
+    this.missiles = [];
     this.hitEventBuf = [];
     this.fireEventBuf = [];
     this.killEventBuf = [];
@@ -289,6 +307,7 @@ export default class SpaceWarRoom implements Party.Server {
         energy: C.SHIP_ENERGY,
         fireCD: 0,
         weapon: 0,
+        missileAmmo: C.MISSILE_AMMO_MAX,
         alive: true,
         respawnAtTick: 0,
         invulnUntilTick: this.tick + Math.floor(C.RESPAWN_INVULN_S * C.SERVER_TICK_HZ),
@@ -357,6 +376,7 @@ export default class SpaceWarRoom implements Party.Server {
         thrustX: 0, thrustZ: 0,
         boost: false, brake: false,
         weapon: 0, fire: false,
+        targetId: null,
         lastSeq: -1, clientTime: 0,
       };
       this.inputs.set(playerId, cur);
@@ -375,6 +395,7 @@ export default class SpaceWarRoom implements Party.Server {
     cur.fire    = !!msg.fire;
     const w = Math.floor(sanitizeNum(msg.weapon));
     cur.weapon = w >= 0 && w < C.WEAPONS.length ? w : 0;
+    cur.targetId = (typeof msg.targetId === "string" && msg.targetId.length <= 64) ? msg.targetId : null;
     cur.lastSeq = sanitizeNum(msg.seq, cur.lastSeq);
     cur.clientTime = sanitizeNum(msg.clientTime, cur.clientTime);
   }
@@ -432,7 +453,19 @@ export default class SpaceWarRoom implements Party.Server {
       // Fire
       if (inp && inp.fire && ps.fireCD <= 0) {
         const w = C.WEAPONS[inp.weapon] ?? C.WEAPONS[0];
-        if (w && ps.energy >= w.energy) {
+        if (w && w.isMissile) {
+          // Missile: needs ammo + a still-alive locked target. Lock isn't
+          // strictly required (we'll fire a dumb dud if absent), but for
+          // PvP we mandate it so missiles aren't a free spam weapon.
+          const tgt = inp.targetId ? this.players.get(inp.targetId) : null;
+          const validTarget = tgt && tgt.id !== ps.id && tgt.alive;
+          if (ps.missileAmmo > 0 && validTarget) {
+            ps.missileAmmo--;
+            ps.fireCD = w.cooldown;
+            ps.weapon = inp.weapon;
+            this.spawnMissile(ps, w, inp.weapon, inp.targetId);
+          }
+        } else if (w && ps.energy >= w.energy) {
           ps.energy -= w.energy;
           ps.fireCD = w.cooldown;
           ps.weapon = inp.weapon;
@@ -469,7 +502,115 @@ export default class SpaceWarRoom implements Party.Server {
       }
     }
 
+    // ---- Missiles ----
+    this.tickMissiles(dt);
+
     this.tick++;
+  }
+
+  private tickMissiles(dt: number) {
+    for (let i = this.missiles.length - 1; i >= 0; i--) {
+      const m = this.missiles[i];
+      m.ttl -= dt;
+      // Re-validate the target. If gone/dead, missile goes ballistic
+      // along its current heading.
+      const tgt = m.targetId ? this.players.get(m.targetId) : null;
+      const targetValid = !!tgt && tgt.alive;
+      const w = C.WEAPONS[2];
+      const accel = w.accel ?? 320;
+      const maxSpeed = w.projSpeed;
+      const turn = w.turnRate ?? 5.0;
+      if (targetValid) {
+        // Steer velocity toward the lead-predicted intercept point.
+        const target = tgt!;
+        // Iterative lead prediction (same algo as client lead indicator).
+        let aimX = target.pos.x, aimY = target.pos.y, aimZ = target.pos.z;
+        for (let k = 0; k < 3; k++) {
+          const dx = aimX - m.pos.x, dy = aimY - m.pos.y, dz = aimZ - m.pos.z;
+          const td = Math.hypot(dx, dy, dz) / maxSpeed;
+          aimX = target.pos.x + target.vel.x * td;
+          aimY = target.pos.y + target.vel.y * td;
+          aimZ = target.pos.z + target.vel.z * td;
+        }
+        const dx = aimX - m.pos.x, dy = aimY - m.pos.y, dz = aimZ - m.pos.z;
+        const dl = Math.hypot(dx, dy, dz) || 1;
+        const desiredX = dx / dl, desiredY = dy / dl, desiredZ = dz / dl;
+        // Blend velocity direction toward desired by turn * dt.
+        const vlen = Math.hypot(m.vel.x, m.vel.y, m.vel.z) || 1;
+        const cx = m.vel.x / vlen, cy = m.vel.y / vlen, cz = m.vel.z / vlen;
+        const a = Math.min(1, turn * dt);
+        const nx = cx + (desiredX - cx) * a;
+        const ny = cy + (desiredY - cy) * a;
+        const nz = cz + (desiredZ - cz) * a;
+        const nlen = Math.hypot(nx, ny, nz) || 1;
+        const speed = Math.min(maxSpeed, vlen + accel * dt);
+        m.vel.x = (nx / nlen) * speed;
+        m.vel.y = (ny / nlen) * speed;
+        m.vel.z = (nz / nlen) * speed;
+      } else {
+        // Coast: accelerate along current heading, clamped.
+        const vlen = Math.hypot(m.vel.x, m.vel.y, m.vel.z) || 1;
+        const speed = Math.min(maxSpeed, vlen + accel * dt);
+        m.vel.x = (m.vel.x / vlen) * speed;
+        m.vel.y = (m.vel.y / vlen) * speed;
+        m.vel.z = (m.vel.z / vlen) * speed;
+      }
+      m.pos.x += m.vel.x * dt;
+      m.pos.y += m.vel.y * dt;
+      m.pos.z += m.vel.z * dt;
+      // Update quaternion so the client can render the missile pointed
+      // along its trajectory.
+      const vlen = Math.hypot(m.vel.x, m.vel.y, m.vel.z) || 1;
+      const fx = m.vel.x / vlen, fy = m.vel.y / vlen, fz = m.vel.z / vlen;
+      // Quaternion from (0,0,-1) to (fx,fy,fz)
+      const dotF = -fz;                  // (0,0,-1) · (fx,fy,fz)
+      const ang  = Math.acos(Math.max(-1, Math.min(1, dotF)));
+      let axX = -fy, axY = fx, axZ = 0;  // cross((0,0,-1),(fx,fy,fz))
+      const axLen = Math.hypot(axX, axY, axZ);
+      if (axLen > 1e-5) {
+        axX /= axLen; axY /= axLen; axZ /= axLen;
+        const s = Math.sin(ang * 0.5);
+        m.quat.x = axX * s;
+        m.quat.y = axY * s;
+        m.quat.z = axZ * s;
+        m.quat.w = Math.cos(ang * 0.5);
+      }
+      // Hit detection.
+      let hit = false;
+      for (const ps of this.players.values()) {
+        if (ps.id === m.owner || !ps.alive) continue;
+        if (this.tick < ps.invulnUntilTick) continue;
+        const dx = ps.pos.x - m.pos.x, dy = ps.pos.y - m.pos.y, dz = ps.pos.z - m.pos.z;
+        const r = C.SHIP_HIT_RADIUS + C.MISSILE_HIT_RADIUS;
+        if (dx * dx + dy * dy + dz * dz < r * r) {
+          this.hitEventBuf.push({ shooter: m.owner, victim: ps.id, weapon: 2, pos: { x: m.pos.x, y: m.pos.y, z: m.pos.z } });
+          this.applyDamage(ps, m.damage, m.owner, 2);
+          hit = true;
+          break;
+        }
+      }
+      if (hit || m.ttl <= 0) {
+        this.missiles.splice(i, 1);
+      }
+    }
+  }
+
+  private spawnMissile(ps: PlayerState, w: typeof C.WEAPONS[number], weaponIdx: number, targetId: string | null) {
+    const fwd: Vec3 = { x: 0, y: 0, z: 0 };
+    forwardFromQuat(fwd, ps.quat);
+    const launchSpeed = 120; // starts slow, accelerates while homing
+    const m: Missile = {
+      id: this.nextMissileId++,
+      owner: ps.id,
+      targetId,
+      pos: { x: ps.pos.x, y: ps.pos.y, z: ps.pos.z },
+      vel: { x: ps.vel.x + fwd.x * launchSpeed, y: ps.vel.y + fwd.y * launchSpeed, z: ps.vel.z + fwd.z * launchSpeed },
+      quat: { x: ps.quat.x, y: ps.quat.y, z: ps.quat.z, w: ps.quat.w },
+      damage: w.damage,
+      ttl: w.ttl,
+    };
+    this.missiles.push(m);
+    this.fireEventBuf.push({ shooter: ps.id, weapon: weaponIdx, pos: { x: ps.pos.x, y: ps.pos.y, z: ps.pos.z } });
   }
 
   private spawnBullets(ps: PlayerState, w: typeof C.WEAPONS[number], weaponIdx: number) {
@@ -541,6 +682,7 @@ export default class SpaceWarRoom implements Party.Server {
     ps.hull = C.SHIP_HULL;
     ps.shield = C.SHIP_SHIELD;
     ps.energy = C.SHIP_ENERGY;
+    ps.missileAmmo = C.MISSILE_AMMO_MAX;
     ps.fireCD = 0;
     ps.alive = true;
     ps.invulnUntilTick = this.tick + Math.floor(C.RESPAWN_INVULN_S * C.SERVER_TICK_HZ);
@@ -569,6 +711,7 @@ export default class SpaceWarRoom implements Party.Server {
         hull: p.hull,
         shield: p.shield,
         energy: p.energy,
+        missileAmmo: p.missileAmmo,
         alive: p.alive,
         invulnUntilTick: p.invulnUntilTick,
         kills: p.kills,
@@ -581,6 +724,14 @@ export default class SpaceWarRoom implements Party.Server {
         pos: b.pos,
         vel: b.vel,
         weapon: b.weapon,
+      })),
+      missiles: this.missiles.map((m) => ({
+        id: m.id,
+        owner: m.owner,
+        targetId: m.targetId,
+        pos: m.pos,
+        vel: m.vel,
+        quat: m.quat,
       })),
       fires: this.fireEventBuf,
       hits: this.hitEventBuf,

@@ -29,14 +29,21 @@ export const SHIP_SHIELD_REGEN   = 8;     // per second
 export const SHIP_ENERGY_REGEN   = 25;
 
 // ----- Weapons -----
-// Order matters: index 0 = laser, 1 = pulse, 2 = missile (deferred).
+// Order matches the player.weapon slot indices (0/1/2 keyboard).
 export const WEAPONS = [
-  { id: 'laser', cooldown: 0.14, energy: 8, damage: 9,  projSpeed: 280, ttl: 2.4, dual: true,  color: 0x66ffcc },
-  { id: 'pulse', cooldown: 0.06, energy: 2, damage: 6,  projSpeed: 340, ttl: 2.0, dual: false, color: 0xffee44 },
+  { id: 'laser',   cooldown: 0.14, energy: 8, damage: 9,  projSpeed: 280, ttl: 2.4, dual: true,  color: 0x66ffcc, isMissile: false },
+  { id: 'pulse',   cooldown: 0.06, energy: 2, damage: 6,  projSpeed: 340, ttl: 2.0, dual: false, color: 0xffee44, isMissile: false },
+  { id: 'missile', cooldown: 1.2,  energy: 0, damage: 65, projSpeed: 230, ttl: 5.0, dual: false, color: 0xffaa44, isMissile: true,  needsLock: true, accel: 320, turnRate: 5.0 },
 ];
 
 // ----- Bullet -----
 export const BULLET_HIT_RADIUS = 1.4;
+
+// ----- Missile -----
+export const MISSILE_AMMO_MAX  = 6;
+export const MISSILE_HIT_RADIUS = 2.4;
+export const MISSILE_LOCK_CONE  = 0.7;    // cos(angle) — wider than aim cone for lasers
+export const MISSILE_LOCK_RANGE = 600;
 
 // ----- Match flow -----
 export const COUNTDOWN_S       = 3;
