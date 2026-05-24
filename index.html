@@ -207,6 +207,121 @@
     opacity: 0.35; cursor: not-allowed; pointer-events: none;
     box-shadow: none;
   }
+  /* ----- PvP IN-MATCH HUD ----- */
+  #pvp-hud { display: none; pointer-events: none; }
+  body.pvp #pvp-hud { display: block; }
+  /* Hide single-player HUD panels while in a match — the PvP HUD above
+     provides its own bars, score and labels. Keep #crosshair so the
+     player can aim, and #toasts so achievement unlocks still pop. */
+  body.pvp #top-left, body.pvp #top-right, body.pvp #bottom-left,
+  body.pvp #bottom-right, body.pvp #radar, body.pvp #mission-hud,
+  body.pvp #cockpit-frame, body.pvp #cockpit-vignette,
+  body.pvp #lead, body.pvp #dock-prompt, body.pvp #zone-warning { display: none !important; }
+  #pvp-top {
+    position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+    color: #00ff66; font-family: 'Courier New', monospace; text-align: center;
+    text-shadow: 0 0 8px #00ff66; pointer-events: none;
+  }
+  #pvp-timer { font-size: 28px; letter-spacing: 4px; font-weight: bold; }
+  #pvp-timer.urgent { color: #ff4466; text-shadow: 0 0 10px #ff4466; }
+  #pvp-subtitle { font-size: 11px; letter-spacing: 2px; opacity: 0.7; margin-top: 2px; }
+  #pvp-countdown {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    font-size: 160px; font-weight: bold; letter-spacing: 4px;
+    color: #ffcc44; text-shadow: 0 0 30px #ffcc44;
+    pointer-events: none; opacity: 0; transition: opacity 0.2s;
+  }
+  #pvp-countdown.active { opacity: 1; }
+  #pvp-leftpanel {
+    position: absolute; top: 14px; left: 14px;
+    color: #00ff66; font-family: 'Courier New', monospace;
+    text-shadow: 0 0 6px #00ff66; font-size: 12px; letter-spacing: 1px;
+    pointer-events: none;
+  }
+  #pvp-leftpanel .row { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
+  #pvp-leftpanel .bar {
+    width: 110px; height: 8px; border: 1px solid #00ff66; position: relative;
+    background: rgba(0,0,0,0.4);
+  }
+  #pvp-leftpanel .bar > div { height: 100%; transition: width 0.1s linear; }
+  #pvp-leftpanel .label { width: 36px; }
+  #pvp-rightpanel {
+    position: absolute; top: 14px; right: 14px; text-align: right;
+    color: #00ff66; font-family: 'Courier New', monospace;
+    text-shadow: 0 0 6px #00ff66; font-size: 12px; letter-spacing: 1px;
+    pointer-events: none;
+  }
+  #pvp-rightpanel .big {
+    font-size: 32px; font-weight: bold; letter-spacing: 3px; line-height: 1;
+  }
+  #pvp-killfeed {
+    position: absolute; right: 14px; top: 110px; width: 280px;
+    display: flex; flex-direction: column; gap: 5px; pointer-events: none;
+    font-family: 'Courier New', monospace; font-size: 12px;
+  }
+  .pvp-kill {
+    background: rgba(0,16,0,0.7); padding: 5px 10px;
+    border-left: 3px solid #ff6644;
+    animation: pvpKillIn 0.25s; transition: opacity 0.5s, transform 0.5s;
+  }
+  .pvp-kill .killer { font-weight: bold; }
+  .pvp-kill .arrow  { color: #ffcc44; margin: 0 5px; }
+  .pvp-kill .victim { opacity: 0.85; }
+  .pvp-kill .self   { color: #ff4466; }
+  @keyframes pvpKillIn {
+    from { opacity: 0; transform: translateX(20px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  /* Floating callsign + hull bar above each remote ship */
+  #pvp-labels {
+    position: absolute; inset: 0; pointer-events: none; z-index: 5;
+    font-family: 'Courier New', monospace;
+  }
+  .pvp-label {
+    position: absolute; transform: translate(-50%, -100%);
+    text-align: center; font-size: 11px; letter-spacing: 1px;
+    text-shadow: 0 0 5px currentColor; white-space: nowrap;
+  }
+  .pvp-label .pvp-name { padding: 0 4px; }
+  .pvp-label .pvp-hbar {
+    width: 60px; height: 4px; margin: 2px auto 0;
+    border: 1px solid currentColor; background: rgba(0,0,0,0.5);
+  }
+  .pvp-label .pvp-hbar > div { height: 100%; background: currentColor; }
+  /* Scoreboard (hold Tab) */
+  #pvp-scoreboard {
+    position: absolute; top: 80px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,16,0,0.86); border: 1px solid #00ff66;
+    box-shadow: 0 0 20px rgba(0,255,102,0.4);
+    color: #00ff66; font-family: 'Courier New', monospace;
+    padding: 14px 26px; min-width: 360px; display: none;
+    text-shadow: 0 0 6px #00ff66; pointer-events: none;
+  }
+  body.pvp.sb #pvp-scoreboard { display: block; }
+  #pvp-scoreboard h3 { font-size: 14px; letter-spacing: 4px; margin-bottom: 10px; text-align: center; }
+  .sb-row {
+    display: grid; grid-template-columns: 1fr 50px 50px 70px;
+    gap: 12px; padding: 5px 0; font-size: 12px; letter-spacing: 1px;
+    border-bottom: 1px solid rgba(0,255,102,0.2);
+  }
+  .sb-row.head { opacity: 0.6; font-size: 10px; }
+  .sb-row .sb-dot { display: inline-block; width: 8px; height: 8px;
+    border-radius: 50%; margin-right: 6px; box-shadow: 0 0 5px currentColor; }
+  .sb-row.dead   { opacity: 0.45; }
+  .sb-row .right { text-align: right; }
+  /* Death overlay during respawn wait */
+  #pvp-death {
+    position: absolute; inset: 0; background: rgba(40,0,0,0.45);
+    display: none; align-items: center; justify-content: center;
+    pointer-events: none; z-index: 7;
+  }
+  body.pvp.dead #pvp-death { display: flex; }
+  #pvp-death .inner {
+    text-align: center; color: #ff4466; font-family: 'Courier New', monospace;
+    text-shadow: 0 0 12px #ff4466;
+  }
+  #pvp-death .big { font-size: 64px; letter-spacing: 6px; font-weight: bold; }
+  #pvp-death .sub { font-size: 14px; letter-spacing: 2px; opacity: 0.85; margin-top: 6px; }
   /* --- ACHIEVEMENTS screen --- */
   #ach-overlay .box {
     border: 1px solid #00ff66; padding: 28px 38px;
@@ -554,6 +669,39 @@
   </div>
 </div>
 
+<!-- PVP IN-MATCH HUD — top-level so it can sit above the WebGL canvas -->
+<div id="pvp-hud">
+  <div id="pvp-top">
+    <div id="pvp-timer">3:00</div>
+    <div id="pvp-subtitle">FREE-FOR-ALL · FIRST TO 15 KILLS</div>
+  </div>
+  <div id="pvp-leftpanel">
+    <div class="row"><span class="label">HULL</span><div class="bar"><div id="pvp-hull-bar" style="width:100%;background:#00ff66"></div></div></div>
+    <div class="row"><span class="label">SHLD</span><div class="bar"><div id="pvp-shield-bar" style="width:100%;background:#66aaff"></div></div></div>
+    <div class="row"><span class="label">ENRG</span><div class="bar"><div id="pvp-energy-bar" style="width:100%;background:#aaff66"></div></div></div>
+    <div class="row" style="margin-top:8px;font-size:11px;opacity:0.7">WPN: <span id="pvp-weapon-name">LASER</span></div>
+  </div>
+  <div id="pvp-rightpanel">
+    <div>KILLS · DEATHS</div>
+    <div class="big"><span id="pvp-k">0</span> · <span id="pvp-d">0</span></div>
+    <div style="margin-top:8px;opacity:0.7;font-size:10px">HOLD TAB FOR SCOREBOARD</div>
+  </div>
+  <div id="pvp-killfeed"></div>
+  <div id="pvp-labels"></div>
+  <div id="pvp-scoreboard">
+    <h3>SCOREBOARD</h3>
+    <div class="sb-row head"><div>PILOT</div><div class="right">K</div><div class="right">D</div><div class="right">SCORE</div></div>
+    <div id="pvp-sb-rows"></div>
+  </div>
+  <div id="pvp-countdown"></div>
+  <div id="pvp-death">
+    <div class="inner">
+      <div class="big">DESTROYED</div>
+      <div class="sub">RESPAWNING IN <span id="pvp-respawn-s">3</span>...</div>
+    </div>
+  </div>
+</div>
+
 <div id="shop-overlay">
   <div class="box">
     <h1>UPGRADE BAY</h1>
@@ -669,6 +817,8 @@ import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass }     from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import * as NET from './shared/constants.mjs';
+import { stepShip as netStepShip, applyZone as netApplyZone } from './shared/physics.mjs';
 
 // ====== CORE SETUP ======
 const scene = new THREE.Scene();
@@ -1863,6 +2013,14 @@ function mpConnect(roomId) {
     } else if (m.t === 'PONG') {
       MP.rtt = Date.now() - m.clientSent;
       renderMP();
+    } else if (m.t === 'MATCH_START') {
+      pvpEnter(m);
+    } else if (m.t === 'SNAPSHOT') {
+      pvpHandleSnapshot(m);
+    } else if (m.t === 'MATCH_END') {
+      pvpHandleMatchEnd(m);
+    } else if (m.t === 'LOBBY') {
+      pvpHandleLobby();
     }
   };
   ws.onerror = () => { /* close will follow — handle there */ };
@@ -1937,15 +2095,26 @@ function renderMP() {
              (me ? `<span class="mp-you">YOU${MP.rtt != null ? ' · ' + MP.rtt + ' ms' : ''}</span>` : '') +
              `</div>`;
     }).join('');
+    const canStart = MP.peers.length >= NET.MIN_PLAYERS_TO_START;
+    const startLabel = canStart
+      ? '▶ START MATCH'
+      : `▶ START MATCH (NEED ${NET.MIN_PLAYERS_TO_START - MP.peers.length} MORE)`;
     body.innerHTML =
       `<div class="mp-code-display">${escMP(MP.roomId)}</div>` +
       `<p class="mp-hint">Send this code to your friends to invite them.</p>` +
-      `<div class="mp-status">${MP.peers.length}/4 PILOTS IN ROOM</div>` +
+      `<div class="mp-status">${MP.peers.length}/${NET.MAX_PLAYERS_PER_ROOM} PILOTS IN ROOM</div>` +
       `<div class="mp-peers">${peerRows}</div>` +
       `<div class="menu-btns" style="margin-top:14px;max-width:none">` +
-        `<div class="menu-btn primary disabled" id="mp-start" title="Match flow lands in Phase 2">▶ START MATCH (PHASE 2)</div>` +
+        `<div class="menu-btn primary${canStart ? '' : ' disabled'}" id="mp-start">${startLabel}</div>` +
         `<div class="menu-btn" id="mp-leave">◀ LEAVE ROOM</div>` +
       `</div>`;
+    const startBtn = document.getElementById('mp-start');
+    if (startBtn && canStart) {
+      startBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        if (MP.ws && MP.ws.readyState === 1) MP.ws.send(JSON.stringify({ t: 'START_MATCH' }));
+      });
+    }
     document.getElementById('mp-leave').addEventListener('click', e => {
       e.stopPropagation(); mpDisconnect(); mpSetStatus('idle');
     });
@@ -1953,6 +2122,574 @@ function renderMP() {
 }
 // Close the room cleanly if the tab goes away.
 addEventListener('beforeunload', () => { mpDisconnect(); });
+
+// ====== PVP MATCH ======
+// Phase 1+2: server-authoritative deathmatch. Server runs the simulation,
+// client renders from 20 Hz SNAPSHOTs (interpolated between the last two
+// for smoothness) and sends INPUT at 30 Hz. This is strict server-driven —
+// client-side prediction lands in Phase 3, which will mask the input lag
+// you'd otherwise feel here.
+let gameMode = 'menu';      // 'menu' | 'mission' | 'pvp'
+const PVP = {
+  phase: 'WAITING',         // server phase: WAITING / COUNTDOWN / MATCH / END
+  myId: null,
+  matchEndsAt: 0,
+  countdownEndsAt: 0,
+  killLimit: NET.MATCH_KILL_LIMIT,
+  players: new Map(),       // id -> { callsign, color, hexColor, obj, trail, labelEl }
+  bullets: new Map(),       // id -> Object3D
+  snapPrev: null,           // for interpolation
+  snapCur: null,
+  killfeed: [],             // {text, until} entries
+  scoreboard: [],
+  showScoreboard: false,
+  input: {
+    seq: 0,
+    yawAccum: 0,
+    pitchAccum: 0,
+    rollAccum: 0,
+  },
+  inputTimer: null,
+  // shared scratch math
+  tmpFwd:   new THREE.Vector3(),
+  tmpUp:    new THREE.Vector3(),
+  tmpRight: new THREE.Vector3(),
+  tmpVec:   new THREE.Vector3(),
+};
+const PVP_INPUT_HZ = NET.CLIENT_INPUT_HZ;
+const PVP_ROT_SPEED = 1.8;  // rad/s for keyboard rotation
+
+function pvpHexFromColor(c) {
+  // Server sends '#rrggbb'. Three.js wants 0xRRGGBB number.
+  if (typeof c === 'string' && /^#[0-9a-fA-F]{6}$/.test(c)) return parseInt(c.slice(1), 16);
+  return 0x00ff66;
+}
+
+function pvpEnter(matchStartMsg) {
+  if (gameMode === 'pvp') return;
+  // Stop any single-player run still in memory.
+  if (typeof resetWorld === 'function') resetWorld();
+  started = true;          // unlocks per-frame updates that read this flag
+  paused = false;
+  gameMode = 'pvp';
+  document.body.classList.add('pvp');
+  document.body.classList.remove('dead', 'sb');
+  // Close any lingering menu overlays.
+  overlay.style.display = 'none';
+  document.getElementById('mp-overlay').style.display = 'none';
+  document.getElementById('settings-overlay').style.display = 'none';
+  document.getElementById('help-overlay').style.display = 'none';
+  document.getElementById('mission-overlay').style.display = 'none';
+
+  PVP.phase = 'COUNTDOWN';
+  PVP.myId = MP.myId;
+  PVP.matchEndsAt = matchStartMsg.matchEndsAt;
+  PVP.countdownEndsAt = matchStartMsg.countdownEndsAt;
+  PVP.killLimit = matchStartMsg.killLimit || NET.MATCH_KILL_LIMIT;
+  PVP.snapPrev = null;
+  PVP.snapCur = null;
+  PVP.killfeed.length = 0;
+  document.getElementById('pvp-killfeed').innerHTML = '';
+  document.getElementById('pvp-subtitle').textContent =
+    `FREE-FOR-ALL · FIRST TO ${PVP.killLimit} KILLS`;
+
+  // Build remote-player ship meshes from the MATCH_START roster.
+  for (const p of matchStartMsg.players) pvpEnsureShip(p.id, p.callsign, p.color);
+
+  initAudio();
+  setMuted(save.settings.mute);
+  requestLock();
+
+  // Start input flush loop.
+  if (PVP.inputTimer) clearInterval(PVP.inputTimer);
+  PVP.inputTimer = setInterval(pvpSendInput, Math.round(1000 / PVP_INPUT_HZ));
+}
+
+function pvpExit() {
+  if (gameMode !== 'pvp') return;
+  if (PVP.inputTimer) { clearInterval(PVP.inputTimer); PVP.inputTimer = null; }
+  // Tear down ship meshes / labels.
+  for (const [id, ps] of PVP.players) {
+    if (ps.obj && ps.obj.parent) scene.remove(ps.obj);
+    if (ps.obj) disposeObject(ps.obj);
+    if (ps.trail) disposeTrail(ps.trail);
+    if (ps.labelEl) ps.labelEl.remove();
+  }
+  PVP.players.clear();
+  for (const [id, b] of PVP.bullets) { scene.remove(b); }
+  PVP.bullets.clear();
+  PVP.snapPrev = null;
+  PVP.snapCur = null;
+  document.body.classList.remove('pvp', 'dead', 'sb');
+  document.getElementById('pvp-labels').innerHTML = '';
+  gameMode = 'menu';
+  started = false;
+  silenceEngine();
+  if (document.pointerLockElement) document.exitPointerLock();
+}
+
+function pvpEnsureShip(id, callsign, color) {
+  if (PVP.players.has(id)) return PVP.players.get(id);
+  const hex = pvpHexFromColor(color);
+  const local = id === PVP.myId;
+  const obj = local ? player.obj : buildShip(hex, 1.45, 'interceptor');
+  if (!local) {
+    obj.position.set(0, 0, 0);
+    scene.add(obj);
+  }
+  const trail = makeTrail(local ? 20 : 14, hex);
+  const labelEl = document.createElement('div');
+  labelEl.className = 'pvp-label';
+  labelEl.style.color = color;
+  labelEl.innerHTML = `<div class="pvp-name">${escMP(callsign)}</div><div class="pvp-hbar"><div style="width:100%"></div></div>`;
+  if (local) labelEl.style.display = 'none';
+  document.getElementById('pvp-labels').appendChild(labelEl);
+  const entry = { id, callsign, color, hexColor: hex, obj, trail, labelEl, local,
+                  hull: NET.SHIP_HULL, shield: NET.SHIP_SHIELD, energy: NET.SHIP_ENERGY,
+                  alive: true, kills: 0, deaths: 0, score: 0, invulnUntilTick: 0 };
+  PVP.players.set(id, entry);
+  return entry;
+}
+
+function pvpDespawnShip(id) {
+  const ps = PVP.players.get(id);
+  if (!ps) return;
+  if (ps.obj && !ps.local) { scene.remove(ps.obj); disposeObject(ps.obj); }
+  if (ps.trail) disposeTrail(ps.trail);
+  if (ps.labelEl) ps.labelEl.remove();
+  PVP.players.delete(id);
+}
+
+// Receive a SNAPSHOT — pushed into a tiny 2-deep buffer for interpolation.
+function pvpHandleSnapshot(m) {
+  if (gameMode !== 'pvp') return;
+  PVP.snapPrev = PVP.snapCur;
+  PVP.snapCur = { ...m, clientRecvAt: Date.now() };
+  PVP.phase = m.phase;
+  if (m.matchEndsAt) PVP.matchEndsAt = m.matchEndsAt;
+  if (m.countdownEndsAt) PVP.countdownEndsAt = m.countdownEndsAt;
+
+  // One-shot events from this snapshot — play immediately.
+  if (m.fires) for (const f of m.fires) pvpPlayFireFx(f);
+  if (m.hits)  for (const h of m.hits)  pvpPlayHitFx(h);
+  if (m.kills) for (const k of m.kills) pvpRegisterKill(k);
+  if (m.respawns) for (const r of m.respawns) pvpRegisterRespawn(r);
+}
+
+function pvpPlayFireFx(f) {
+  // Lightweight: rely on bullet meshes from the next snapshot.
+  // A laser sound when the shooter isn't you would be nice but
+  // we already play the local one on input — sounds for remotes:
+  if (f.shooter !== PVP.myId && audioCtx && typeof playPulse === 'function') {
+    // small chirp for remote shots so you hear them firing
+    const ps = PVP.players.get(f.shooter);
+    if (ps) try { playLaser(ps.obj.position); } catch {}
+  }
+}
+
+function pvpPlayHitFx(h) {
+  // Quick spark explosion at the hit point.
+  if (typeof spawnExplosion === 'function') {
+    spawnExplosion(new THREE.Vector3(h.pos.x, h.pos.y, h.pos.z), 0xffcc44, 0.4);
+  }
+}
+
+function pvpRegisterKill(k) {
+  const killer = PVP.players.get(k.killer);
+  const victim = PVP.players.get(k.victim);
+  // Big explosion on the victim's last position so it reads as a kill.
+  if (victim && victim.obj) spawnExplosion(victim.obj.position.clone(), victim.hexColor, 2.2);
+  if (victim) { victim.alive = false; victim.hull = 0; }
+  if (PVP.myId && (k.killer === PVP.myId || k.victim === PVP.myId)) {
+    if (k.victim === PVP.myId) document.body.classList.add('dead');
+  }
+  const killerName = killer ? killer.callsign : '???';
+  const victimName = victim ? victim.callsign : '???';
+  const me = PVP.myId;
+  const meClassK = k.killer === me ? 'self' : '';
+  const meClassV = k.victim === me ? 'self' : '';
+  pvpAddKillFeed(
+    `<span class="killer ${meClassK}">${escMP(killerName)}</span>` +
+    `<span class="arrow">►</span>` +
+    `<span class="victim ${meClassV}">${escMP(victimName)}</span>`
+  );
+}
+
+function pvpRegisterRespawn(r) {
+  const ps = PVP.players.get(r.id);
+  if (!ps) return;
+  ps.alive = true;
+  ps.hull = NET.SHIP_HULL;
+  ps.shield = NET.SHIP_SHIELD;
+  ps.energy = NET.SHIP_ENERGY;
+  if (r.id === PVP.myId) document.body.classList.remove('dead');
+  // Snap immediately to the new spawn position to avoid a visual sweep
+  // across the map from the death point.
+  if (ps.obj) {
+    ps.obj.position.set(r.pos.x, r.pos.y, r.pos.z);
+    ps.obj.quaternion.set(r.quat.x, r.quat.y, r.quat.z, r.quat.w);
+  }
+}
+
+function pvpAddKillFeed(html) {
+  const feed = document.getElementById('pvp-killfeed');
+  const el = document.createElement('div');
+  el.className = 'pvp-kill';
+  el.innerHTML = html;
+  feed.appendChild(el);
+  PVP.killfeed.push({ el, until: Date.now() + 5000 });
+  if (PVP.killfeed.length > 6) {
+    const drop = PVP.killfeed.shift();
+    drop.el.remove();
+  }
+}
+
+// Project a 3D world point to 2D screen coords, returning { x, y, visible }.
+const _pvpProj = new THREE.Vector3();
+function pvpProject(out, vec3) {
+  _pvpProj.copy(vec3).project(camera);
+  out.visible = _pvpProj.z < 1 && _pvpProj.z > -1;
+  out.x = (_pvpProj.x * 0.5 + 0.5) * innerWidth;
+  out.y = (-_pvpProj.y * 0.5 + 0.5) * innerHeight;
+}
+
+// Interpolate between the last two snapshots for smooth rendering.
+function pvpRenderFromSnapshots() {
+  if (!PVP.snapCur) return;
+  // Mark previous-tick players still present so we can despawn missing ones.
+  const seen = new Set();
+  let frac = 1;
+  if (PVP.snapPrev) {
+    const dur = PVP.snapCur.time - PVP.snapPrev.time;
+    const t   = Date.now() - PVP.snapCur.clientRecvAt;
+    frac = dur > 0 ? Math.max(0, Math.min(1, t / dur)) : 1;
+  }
+  const prevById = PVP.snapPrev ? new Map(PVP.snapPrev.players.map(p => [p.id, p])) : null;
+  const curById  = new Map(PVP.snapCur.players.map(p => [p.id, p]));
+
+  PVP.scoreboard = PVP.snapCur.players;
+
+  for (const cur of PVP.snapCur.players) {
+    seen.add(cur.id);
+    let ps = PVP.players.get(cur.id);
+    if (!ps) {
+      // Late roster — usually a peer who joined just before MATCH_START fired.
+      ps = pvpEnsureShip(cur.id, cur.callsign || 'PILOT', cur.color || '#00ff66');
+    }
+    ps.hull = cur.hull;
+    ps.shield = cur.shield;
+    ps.energy = cur.energy;
+    ps.kills = cur.kills;
+    ps.deaths = cur.deaths;
+    ps.score = cur.score;
+    ps.invulnUntilTick = cur.invulnUntilTick;
+    ps.alive = cur.alive;
+    if (!cur.alive) {
+      // Hide ship while dead. Trail naturally stops drawing.
+      if (ps.obj) ps.obj.visible = false;
+      if (ps.labelEl) ps.labelEl.style.display = 'none';
+      continue;
+    }
+    if (ps.obj) ps.obj.visible = true;
+    if (ps.labelEl && !ps.local) ps.labelEl.style.display = '';
+
+    // Position / orientation: interpolate from prev → cur.
+    let px = cur.pos.x, py = cur.pos.y, pz = cur.pos.z;
+    let qx = cur.quat.x, qy = cur.quat.y, qz = cur.quat.z, qw = cur.quat.w;
+    if (prevById && frac < 1) {
+      const prev = prevById.get(cur.id);
+      if (prev) {
+        px = prev.pos.x + (cur.pos.x - prev.pos.x) * frac;
+        py = prev.pos.y + (cur.pos.y - prev.pos.y) * frac;
+        pz = prev.pos.z + (cur.pos.z - prev.pos.z) * frac;
+        // Quaternion lerp (nlerp) — pick the closer hemisphere to avoid flip.
+        let cosA = prev.quat.x*cur.quat.x + prev.quat.y*cur.quat.y + prev.quat.z*cur.quat.z + prev.quat.w*cur.quat.w;
+        const sign = cosA < 0 ? -1 : 1;
+        qx = prev.quat.x + (cur.quat.x * sign - prev.quat.x) * frac;
+        qy = prev.quat.y + (cur.quat.y * sign - prev.quat.y) * frac;
+        qz = prev.quat.z + (cur.quat.z * sign - prev.quat.z) * frac;
+        qw = prev.quat.w + (cur.quat.w * sign - prev.quat.w) * frac;
+        const ql = Math.hypot(qx, qy, qz, qw);
+        if (ql > 0) { qx /= ql; qy /= ql; qz /= ql; qw /= ql; }
+      }
+    }
+    if (ps.obj) {
+      ps.obj.position.set(px, py, pz);
+      ps.obj.quaternion.set(qx, qy, qz, qw);
+    }
+  }
+  // Despawn ships present in prev snapshot but missing now (player left mid-match).
+  for (const id of PVP.players.keys()) {
+    if (!seen.has(id)) pvpDespawnShip(id);
+  }
+
+  // ---- Bullets ----
+  const bulletSeen = new Set();
+  const prevBullets = PVP.snapPrev ? new Map(PVP.snapPrev.bullets.map(b => [b.id, b])) : null;
+  for (const cb of PVP.snapCur.bullets) {
+    bulletSeen.add(cb.id);
+    let m = PVP.bullets.get(cb.id);
+    const color = NET.WEAPONS[cb.weapon]?.color ?? 0x66ffcc;
+    if (!m) {
+      m = new THREE.Mesh(BULLET_GEO, bulletMaterial(color));
+      scene.add(m);
+      PVP.bullets.set(cb.id, m);
+    }
+    let bx = cb.pos.x, by = cb.pos.y, bz = cb.pos.z;
+    if (prevBullets && frac < 1) {
+      const pb = prevBullets.get(cb.id);
+      if (pb) {
+        bx = pb.pos.x + (cb.pos.x - pb.pos.x) * frac;
+        by = pb.pos.y + (cb.pos.y - pb.pos.y) * frac;
+        bz = pb.pos.z + (cb.pos.z - pb.pos.z) * frac;
+      }
+    }
+    m.position.set(bx, by, bz);
+    // Orient along velocity.
+    const vLen = Math.hypot(cb.vel.x, cb.vel.y, cb.vel.z);
+    if (vLen > 0) {
+      PVP.tmpVec.set(cb.vel.x / vLen, cb.vel.y / vLen, cb.vel.z / vLen);
+      m.quaternion.setFromUnitVectors(_bulletUp, PVP.tmpVec);
+    }
+  }
+  for (const [id, mesh] of PVP.bullets) {
+    if (!bulletSeen.has(id)) {
+      scene.remove(mesh);
+      PVP.bullets.delete(id);
+    }
+  }
+}
+
+function pvpCameraFollow() {
+  if (!PVP.myId) return;
+  const me = PVP.players.get(PVP.myId);
+  if (!me || !me.obj) return;
+  PVP.tmpUp.set(0, 1, 0).applyQuaternion(me.obj.quaternion);
+  camera.position.copy(me.obj.position).addScaledVector(PVP.tmpUp, 0.25);
+  camera.quaternion.copy(me.obj.quaternion);
+}
+
+function pvpRenderHUD() {
+  // Match / countdown timer
+  const now = Date.now();
+  const timerEl = document.getElementById('pvp-timer');
+  if (PVP.phase === 'COUNTDOWN') {
+    const remain = Math.max(0, PVP.countdownEndsAt - now);
+    timerEl.textContent = `READY`;
+    timerEl.classList.remove('urgent');
+    const cd = document.getElementById('pvp-countdown');
+    const secs = Math.ceil(remain / 1000);
+    if (secs > 0) { cd.textContent = String(secs); cd.classList.add('active'); }
+    else { cd.classList.remove('active'); }
+  } else if (PVP.phase === 'MATCH') {
+    document.getElementById('pvp-countdown').classList.remove('active');
+    const remain = Math.max(0, PVP.matchEndsAt - now);
+    const s = Math.ceil(remain / 1000);
+    const mm = Math.floor(s / 60), ss = s % 60;
+    timerEl.textContent = `${mm}:${ss < 10 ? '0' : ''}${ss}`;
+    timerEl.classList.toggle('urgent', s <= 30);
+  } else {
+    document.getElementById('pvp-countdown').classList.remove('active');
+  }
+
+  // Self bars
+  const me = PVP.myId ? PVP.players.get(PVP.myId) : null;
+  if (me) {
+    const hp = Math.max(0, me.hull) / NET.SHIP_HULL;
+    document.getElementById('pvp-hull-bar').style.width = (hp * 100).toFixed(0) + '%';
+    document.getElementById('pvp-hull-bar').style.background = hp < 0.3 ? '#ff4466' : hp < 0.6 ? '#ffaa22' : '#00ff66';
+    document.getElementById('pvp-shield-bar').style.width = (Math.max(0, me.shield) / NET.SHIP_SHIELD * 100).toFixed(0) + '%';
+    document.getElementById('pvp-energy-bar').style.width = (Math.max(0, me.energy) / NET.SHIP_ENERGY * 100).toFixed(0) + '%';
+    document.getElementById('pvp-k').textContent = me.kills;
+    document.getElementById('pvp-d').textContent = me.deaths;
+    document.getElementById('pvp-weapon-name').textContent =
+      NET.WEAPONS[PVP.input.weapon || 0]?.id?.toUpperCase() || 'LASER';
+  }
+  // Death respawn countdown — server respawnAtTick isn't directly time-based;
+  // we estimate by saved time of death. For MVP, show a static "RESPAWNING..."
+  document.getElementById('pvp-respawn-s').textContent = '·';
+
+  // Floating labels per ship (and hull bars).
+  const proj = { x: 0, y: 0, visible: false };
+  for (const [id, ps] of PVP.players) {
+    if (!ps.labelEl) continue;
+    if (ps.local || !ps.alive) { ps.labelEl.style.display = 'none'; continue; }
+    pvpProject(proj, ps.obj.position);
+    if (!proj.visible) { ps.labelEl.style.display = 'none'; continue; }
+    ps.labelEl.style.display = '';
+    ps.labelEl.style.left = proj.x + 'px';
+    ps.labelEl.style.top  = (proj.y - 30) + 'px';
+    const bar = ps.labelEl.querySelector('.pvp-hbar > div');
+    if (bar) bar.style.width = (Math.max(0, ps.hull) / NET.SHIP_HULL * 100).toFixed(0) + '%';
+  }
+
+  // Kill feed expiry
+  const t = Date.now();
+  for (let i = PVP.killfeed.length - 1; i >= 0; i--) {
+    if (PVP.killfeed[i].until <= t) {
+      PVP.killfeed[i].el.style.opacity = '0';
+      PVP.killfeed[i].el.style.transform = 'translateX(40px)';
+      setTimeout((el) => el.remove(), 500, PVP.killfeed[i].el);
+      PVP.killfeed.splice(i, 1);
+    }
+  }
+
+  // Scoreboard
+  if (PVP.showScoreboard) {
+    const rows = document.getElementById('pvp-sb-rows');
+    const sorted = [...PVP.scoreboard].sort((a, b) => b.kills - a.kills || b.score - a.score || a.deaths - b.deaths);
+    rows.innerHTML = sorted.map(p => {
+      const pst = PVP.players.get(p.id);
+      const name = pst ? pst.callsign : '???';
+      const col = pst ? pst.color : '#00ff66';
+      const dead = !p.alive ? ' dead' : '';
+      return `<div class="sb-row${dead}">` +
+        `<div><span class="sb-dot" style="color:${col};background:${col}"></span>${escMP(name)}</div>` +
+        `<div class="right">${p.kills}</div>` +
+        `<div class="right">${p.deaths}</div>` +
+        `<div class="right">${p.score}</div>` +
+      `</div>`;
+    }).join('');
+  }
+}
+
+function pvpCollectInputDeltas(dt) {
+  if (PVP.phase !== 'MATCH') return; // freeze inputs during countdown
+  // Mouse — consumed from the same accumulator the single-player game uses.
+  if (mouse.dx !== 0 || mouse.dy !== 0) {
+    const sens = MOUSE_SENS * (save.settings.sensitivity || 1.0);
+    PVP.input.yawAccum   -= mouse.dx * sens;
+    PVP.input.pitchAccum -= mouse.dy * sens;
+    mouse.dx = 0; mouse.dy = 0;
+  }
+  // Keyboard rotation — arrow keys for yaw/pitch, Q/E for roll.
+  if (keys['ArrowUp'])    PVP.input.pitchAccum +=  PVP_ROT_SPEED * dt;
+  if (keys['ArrowDown'])  PVP.input.pitchAccum -=  PVP_ROT_SPEED * dt;
+  if (keys['ArrowLeft'])  PVP.input.yawAccum   +=  PVP_ROT_SPEED * dt;
+  if (keys['ArrowRight']) PVP.input.yawAccum   -=  PVP_ROT_SPEED * dt;
+  if (keys['KeyQ']) PVP.input.rollAccum +=  PVP_ROT_SPEED * dt;
+  if (keys['KeyE']) PVP.input.rollAccum -=  PVP_ROT_SPEED * dt;
+  // Touch sticks (mobile).
+  if (touch.aimX) PVP.input.yawAccum   -= touch.aimX * 2.4 * dt;
+  if (touch.aimY) PVP.input.pitchAccum -= touch.aimY * 2.4 * dt;
+}
+
+function pvpSendInput() {
+  if (gameMode !== 'pvp' || !MP.ws || MP.ws.readyState !== 1) return;
+  let thrustZ = 0, thrustX = 0;
+  if (keys['KeyW']) thrustZ += 1;
+  if (keys['KeyS']) thrustZ -= 1;
+  if (keys['KeyD']) thrustX += 1;
+  if (keys['KeyA']) thrustX -= 1;
+  if (touch.thrust) thrustZ += touch.thrust;
+  if (touch.strafe) thrustX += touch.strafe;
+  thrustZ = Math.max(-1, Math.min(1, thrustZ));
+  thrustX = Math.max(-1, Math.min(1, thrustX));
+  const boost = !!(keys['ShiftLeft'] || keys['ShiftRight'] || touch.boost);
+  const brake = !!keys['KeyX'];
+  const fire  = !!(mouse.down || keys['Space'] || touch.fire);
+  const wpn   = player.weapon || 0;
+  PVP.input.seq++;
+  try {
+    MP.ws.send(JSON.stringify({
+      t: 'INPUT',
+      seq: PVP.input.seq,
+      yawDelta:   PVP.input.yawAccum,
+      pitchDelta: PVP.input.pitchAccum,
+      rollDelta:  PVP.input.rollAccum,
+      thrustX, thrustZ, boost, brake,
+      weapon: wpn, fire,
+      clientTime: Date.now(),
+    }));
+  } catch {}
+  PVP.input.yawAccum = 0;
+  PVP.input.pitchAccum = 0;
+  PVP.input.rollAccum = 0;
+  PVP.input.weapon = wpn;
+}
+
+function updatePvP(dt) {
+  pvpCollectInputDeltas(dt);
+  pvpRenderFromSnapshots();
+  pvpCameraFollow();
+  pvpRenderHUD();
+  if (typeof updateTrails === 'function') updateTrails(dt);
+  if (typeof updateExplosions === 'function') updateExplosions(dt);
+}
+
+function pvpHandleMatchEnd(m) {
+  if (gameMode !== 'pvp') return;
+  PVP.phase = 'END';
+  document.body.classList.remove('dead');
+  document.body.classList.remove('sb');
+  // Build a scoreboard overlay on top of the existing menu overlay.
+  overlayMode = 'pvp-end';
+  paused = true;
+  overlay.style.display = 'flex';
+  const me = m.scores.find(s => s.id === PVP.myId);
+  const winnerEntry = m.scores[0];
+  const isWinner = winnerEntry && winnerEntry.id === PVP.myId;
+  const title = isWinner ? 'VICTORY' : 'MATCH OVER';
+  const titleColor = isWinner ? '#ffcc44' : '#00ff66';
+  const rows = m.scores.map((s, i) => {
+    const rank = i + 1;
+    const mine = s.id === PVP.myId ? ' style="color:#ffcc44;text-shadow:0 0 8px #ffcc44"' : '';
+    return `<div class="sb-row"${mine}>` +
+      `<div><span class="sb-dot" style="color:${s.color};background:${s.color}"></span>` +
+      `#${rank} ${escMP(s.callsign)}</div>` +
+      `<div class="right">${s.kills}</div>` +
+      `<div class="right">${s.deaths}</div>` +
+      `<div class="right">${s.score}</div>` +
+    `</div>`;
+  }).join('');
+  overlayBox.innerHTML = `
+    <h1 style="color:${titleColor};text-shadow:0 0 14px ${titleColor}">${title}</h1>
+    <h2>${m.scores.length}-PILOT FFA · WINNER: ${escMP(winnerEntry ? winnerEntry.callsign : '—')}</h2>
+    <div class="sb-row head" style="margin-top:14px"><div>PILOT</div><div class="right">K</div><div class="right">D</div><div class="right">SCORE</div></div>
+    ${rows}
+    <p style="margin-top:14px;opacity:0.8">Returning to lobby in ${Math.ceil((m.postEndsAt - Date.now())/1000)}s…</p>
+    <div class="menu-btns" style="margin-top:14px"><div class="menu-btn primary" id="mb-pvp-lobby">▶ BACK TO LOBBY NOW</div></div>
+  `;
+  const back = document.getElementById('mb-pvp-lobby');
+  if (back) back.addEventListener('click', e => { e.stopPropagation(); pvpReturnToLobby(); });
+}
+
+function pvpReturnToLobby() {
+  pvpExit();
+  paused = false;
+  overlayMode = 'title';
+  overlay.style.display = 'none';
+  // Show MP overlay again so the player can immediately rematch.
+  if (MP.ws && MP.ws.readyState === 1) {
+    document.getElementById('mp-overlay').style.display = 'flex';
+    renderMP();
+  } else {
+    overlay.style.display = 'flex';
+    overlayBox.innerHTML = '';
+    // Restore the default start-menu DOM (it's static markup the engine never mutates).
+    // Simplest: reload the user back to lobby via showMultiplayer().
+    showMultiplayer();
+  }
+}
+
+function pvpHandleLobby() {
+  // Server has reset to WAITING — make sure local state is clean.
+  if (gameMode === 'pvp') pvpReturnToLobby();
+}
+
+// Hot-wire the existing socket onmessage to forward match traffic.
+function pvpHookSocket(ws) {
+  const prev = ws.onmessage;
+  ws.onmessage = ev => {
+    let m;
+    try { m = JSON.parse(ev.data); } catch { if (prev) prev(ev); return; }
+    if (m.t === 'MATCH_START') { pvpEnter(m); return; }
+    if (m.t === 'SNAPSHOT')    { pvpHandleSnapshot(m); return; }
+    if (m.t === 'MATCH_END')   { pvpHandleMatchEnd(m); return; }
+    if (m.t === 'LOBBY')       { pvpHandleLobby(); }
+    if (prev) prev(ev);
+  };
+}
 
 // Wire the menu buttons (all static HTML, present at load).
 document.getElementById('mb-missions').addEventListener('click', e => { e.stopPropagation(); showMissionSelect(); });
@@ -2573,6 +3310,13 @@ function updateTrails(dt) {
     const p = e.obj.position;
     pushTrail(e.trail, p.x, p.y, p.z);
   }
+  if (gameMode === 'pvp') {
+    for (const [, ps] of PVP.players) {
+      if (!ps.trail || ps.local || !ps.alive || !ps.obj) continue;
+      const p = ps.obj.position;
+      pushTrail(ps.trail, p.x, p.y, p.z);
+    }
+  }
 }
 
 // ====== EXPLOSIONS ======
@@ -2634,17 +3378,26 @@ addEventListener('keydown', e => {
     if (document.getElementById('mp-overlay').style.display === 'flex') { closeMultiplayer(); return; }
     if (document.getElementById('settings-overlay').style.display === 'flex') { closeSettings(); return; }
     if (document.getElementById('shop-overlay').style.display === 'flex') { closeShop(); return; }
+    if (gameMode === 'pvp') { mpDisconnect(); pvpExit(); overlay.style.display = 'flex'; overlayMode = 'title'; return; }
     if (started && player.hull > 0 && !paused) pauseGame();
   }
   if (e.code === 'Digit1') player.weapon = 0;
   if (e.code === 'Digit2') player.weapon = 1;
   if (e.code === 'Digit3') player.weapon = 2;
-  if (e.code === 'Tab' && started && player.hull > 0) cyclePowerMode();
+  // Tab toggles scoreboard in PvP; power-mode in single-player.
+  if (e.code === 'Tab') {
+    if (gameMode === 'pvp') { PVP.showScoreboard = true; document.body.classList.add('sb'); }
+    else if (started && player.hull > 0) cyclePowerMode();
+  }
   if (e.code === 'KeyM') { setMuted(!save.settings.mute); showToast(save.settings.mute ? 'SOUND: MUTED' : 'SOUND: ON'); }
 });
 addEventListener('keyup', e => {
   keys[e.code] = false;
   if (CAPTURED_KEYS.has(e.code)) e.preventDefault();
+  if (e.code === 'Tab' && gameMode === 'pvp') {
+    PVP.showScoreboard = false;
+    document.body.classList.remove('sb');
+  }
 });
 
 addEventListener('mousemove', e => {
@@ -2938,6 +3691,7 @@ function beginMission(def) {
 
   missionOverlay.style.display = 'none';
   overlay.style.display = 'none';
+  gameMode = 'mission';
   started = true;
   paused = false;
   mouse.down = false; mouse.dx = 0; mouse.dy = 0;
@@ -4127,7 +4881,7 @@ function animate() {
     fpsEl.style.color = fps >= 50 ? '#00ff66' : fps >= 30 ? '#ffaa22' : '#ff3344';
     fpsAccum = 0; fpsFrames = 0;
   }
-  if (started && !paused && player.hull > 0) {
+  if (gameMode === 'mission' && started && !paused && player.hull > 0) {
     updatePlayer(dt);
     updateEnemies(dt);
     updateBullets(dt);
@@ -4141,6 +4895,8 @@ function animate() {
     updateTrails(dt);
     updatePickups(dt);
     updateMission(dt);
+  } else if (gameMode === 'pvp' && started && !paused) {
+    updatePvP(dt);
   }
   updateHUD();
   updateRadar();
