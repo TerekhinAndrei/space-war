@@ -8,85 +8,98 @@
 <meta name="mobile-web-app-capable" content="yes">
 <title>SPACE WAR — Retro 3D Combat Simulator</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Courier New', monospace; }
   canvas { display: block; }
-  /* ===== ZX SPECTRUM SPLASH ===== */
+  /* ===== SPLASH (boot-screen style, matches the main app CRT/wireframe look) ===== */
   #splash {
     position: fixed; inset: 0; z-index: 200;
-    background: #0000a8;                      /* Spectrum BLUE — paper colour */
+    background: #000;
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
-    color: #ffff55;                            /* BRIGHT YELLOW */
-    font-family: 'Press Start 2P', 'Courier New', monospace;
+    color: #00ff66;
+    font-family: 'Courier New', monospace;
+    text-shadow: 0 0 8px #00ff66;
     cursor: pointer; user-select: none;
-    -webkit-font-smoothing: none; image-rendering: pixelated;
     transition: opacity 0.45s;
   }
   #splash.fading { opacity: 0; pointer-events: none; }
-  /* Cyan/yellow/red/green border stripes — the classic loading edge bars */
-  #splash::before, #splash::after {
-    content: ''; position: absolute; left: 0; right: 0; height: 22px;
-    background: repeating-linear-gradient(90deg,
-      #ff0000 0 96px, #ffff00 96px 192px, #00ff00 192px 288px, #00ffff 288px 384px);
-    box-shadow: 0 0 0 3px #000 inset;
+  /* Subtle scanlines + edge vignette for the CRT vibe. */
+  #splash::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(0deg,
+      rgba(0,255,102,0.05) 0 1px, transparent 1px 3px);
+    mix-blend-mode: screen;
   }
-  #splash::before { top: 0; }
-  #splash::after  { bottom: 0; }
-  /* Centered title with classic chunky pixel drop shadow (white over red over black). */
+  #splash::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse at center,
+      transparent 55%, rgba(0,20,5,0.85) 100%);
+  }
+  .splash-box {
+    position: relative; z-index: 1;
+    border: 1px solid #00ff66; padding: 38px 60px;
+    box-shadow: 0 0 30px rgba(0,255,102,0.35);
+    text-align: center;
+  }
+  .splash-boot {
+    font-size: 11px; letter-spacing: 3px; opacity: 0.7;
+    margin-bottom: 18px; text-align: left;
+  }
+  .splash-boot .dot { display: inline-block; min-width: 3em; }
+  .splash-boot .ok  { color: #00ff66; }
   .splash-byline {
-    color: #ffffff; font-size: 14px; letter-spacing: 4px;
-    margin-bottom: 22px; text-shadow: 2px 2px 0 #ff0000;
+    font-size: 11px; letter-spacing: 4px; opacity: 0.75; margin-bottom: 14px;
   }
   .splash-title {
-    font-size: 58px; line-height: 1; color: #ffffff;
-    letter-spacing: 8px; margin-bottom: 28px;
-    text-shadow:
-      3px 0  0 #ff0000,
-      0  3px 0 #ff0000,
-      3px 3px 0 #ff0000,
-      6px 6px 0 #000000;
+    font-size: 76px; letter-spacing: 14px; font-weight: bold;
+    line-height: 1; margin-bottom: 10px;
+    text-shadow: 0 0 18px #00ff66, 0 0 4px #00ff66;
   }
   .splash-subtitle {
-    font-size: 14px; color: #00ffff; letter-spacing: 4px;
-    margin-bottom: 26px;
+    font-size: 13px; letter-spacing: 4px; opacity: 0.85; margin-bottom: 22px;
+  }
+  .splash-divider {
+    height: 1px; background: #00ff66;
+    box-shadow: 0 0 8px #00ff66; opacity: 0.5;
+    margin: 14px auto;
   }
   .splash-spec {
-    font-size: 11px; color: #ffff55; letter-spacing: 3px;
-    margin-bottom: 8px;
+    font-size: 11px; letter-spacing: 3px; opacity: 0.7;
+    margin: 4px 0;
   }
-  .splash-spec .v { color: #ffffff; }
+  .splash-spec .v { color: #00ffaa; opacity: 1; }
   .splash-prompt {
-    margin-top: 56px;
-    font-size: 14px; color: #ffff55; letter-spacing: 4px;
+    margin-top: 26px;
+    font-size: 14px; letter-spacing: 4px;
     animation: splashBlink 0.9s steps(2) infinite;
   }
-  @keyframes splashBlink { 50% { opacity: 0; } }
+  @keyframes splashBlink { 50% { opacity: 0.25; } }
   .splash-credit {
-    position: absolute; bottom: 38px;
-    font-size: 9px; color: #ffffff; letter-spacing: 3px;
+    position: absolute; bottom: 28px; z-index: 1;
+    font-size: 10px; letter-spacing: 3px; opacity: 0.7;
+    text-align: center;
   }
   .splash-link {
-    color: #00ffff; text-decoration: underline;
+    color: #00ffaa; text-decoration: underline;
     pointer-events: auto; cursor: pointer;
     text-underline-offset: 3px;
   }
-  .splash-link:hover { color: #ffffff; background: #00aaaa; }
+  .splash-link:hover { color: #ffffff; text-shadow: 0 0 8px #00ffaa; }
   .splash-version {
-    position: absolute; top: 36px; right: 26px;
-    font-size: 9px; color: #ffffff; letter-spacing: 2px;
+    position: absolute; top: 28px; right: 28px; z-index: 1;
+    font-size: 10px; letter-spacing: 3px; opacity: 0.55;
   }
-  /* Smaller variants on phones / shorter viewports */
+  /* Tighten on phones / short viewports */
   @media (max-width: 720px), (max-height: 520px) {
-    .splash-title    { font-size: 36px; letter-spacing: 5px; margin-bottom: 18px; }
-    .splash-byline   { font-size: 10px; margin-bottom: 14px; }
-    .splash-subtitle { font-size: 10px; margin-bottom: 16px; }
-    .splash-spec     { font-size: 9px; }
-    .splash-prompt   { font-size: 11px; margin-top: 30px; }
-    .splash-credit   { bottom: 30px; font-size: 8px; }
-    .splash-version  { top: 30px; right: 12px; font-size: 8px; }
-    #splash::before, #splash::after { height: 14px; }
+    .splash-box      { padding: 22px 28px; }
+    .splash-title    { font-size: 42px; letter-spacing: 8px; }
+    .splash-subtitle { font-size: 10px; letter-spacing: 3px; }
+    .splash-boot     { font-size: 9px; }
+    .splash-spec     { font-size: 10px; }
+    .splash-prompt   { font-size: 12px; margin-top: 18px; }
+    .splash-credit   { bottom: 18px; font-size: 9px; }
+    .splash-version  { top: 14px; right: 14px; font-size: 9px; }
   }
   #hud {
     position: absolute; inset: 0; pointer-events: none;
@@ -716,16 +729,23 @@
 <!-- ZX Spectrum-style cold-load splash. Sits on top of everything; first
      keystroke / tap fades it out and reveals the main menu. -->
 <div id="splash">
-  <div class="splash-version">v1.0  ·  48K</div>
-  <div class="splash-byline">A TEREKHIN DIGITAL CREW PRODUCTION</div>
-  <div class="splash-title">SPACE WAR</div>
-  <div class="splash-subtitle">A 3D COMBAT SIMULATION</div>
-  <div class="splash-spec">CONTROLS: <span class="v">MOUSE + KEYBOARD</span></div>
-  <div class="splash-spec">MODES: <span class="v">CAMPAIGN  ·  ENDLESS  ·  PVP</span></div>
-  <div class="splash-prompt">▶ PRESS ANY KEY</div>
+  <div class="splash-version">SECTOR COMMAND v1.0</div>
+  <div class="splash-box">
+    <div class="splash-boot">
+      &gt; BOOT SHIP SYSTEMS<span class="dot">....</span><span class="ok">OK</span><br>
+      &gt; CALIBRATING WEAPONS<span class="dot">.....</span><span class="ok">OK</span><br>
+      &gt; LINKING TO SECTOR COMMAND<span class="dot">..</span><span class="ok">OK</span>
+    </div>
+    <div class="splash-byline">A TEREKHIN DIGITAL CREW PRODUCTION</div>
+    <div class="splash-title">SPACE WAR</div>
+    <div class="splash-subtitle">RETRO 3D COMBAT SIMULATOR</div>
+    <div class="splash-divider"></div>
+    <div class="splash-spec">CONTROLS: <span class="v">MOUSE + KEYBOARD / TOUCH</span></div>
+    <div class="splash-spec">MODES: <span class="v">CAMPAIGN · ENDLESS · PVP</span></div>
+    <div class="splash-prompt">▶ PRESS ANY KEY</div>
+  </div>
   <div class="splash-credit">
-    SPECTRUM EDITION  ·  LOADED FROM TAPE  ·
-    <a class="splash-link" href="https://www.terekhindt.com" target="_blank" rel="noopener noreferrer">WWW.TEREKHINDT.COM</a>
+    <a class="splash-link" href="https://www.terekhindt.com" target="_blank" rel="noopener noreferrer">www.terekhindt.com</a>
   </div>
 </div>
 <div id="cockpit-vignette"></div>
