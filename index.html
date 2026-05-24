@@ -8,9 +8,80 @@
 <meta name="mobile-web-app-capable" content="yes">
 <title>SPACE WAR — Retro 3D Combat Simulator</title>
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Courier New', monospace; }
   canvas { display: block; }
+  /* ===== ZX SPECTRUM SPLASH ===== */
+  #splash {
+    position: fixed; inset: 0; z-index: 200;
+    background: #0000a8;                      /* Spectrum BLUE — paper colour */
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    color: #ffff55;                            /* BRIGHT YELLOW */
+    font-family: 'Press Start 2P', 'Courier New', monospace;
+    cursor: pointer; user-select: none;
+    -webkit-font-smoothing: none; image-rendering: pixelated;
+    transition: opacity 0.45s;
+  }
+  #splash.fading { opacity: 0; pointer-events: none; }
+  /* Cyan/yellow/red/green border stripes — the classic loading edge bars */
+  #splash::before, #splash::after {
+    content: ''; position: absolute; left: 0; right: 0; height: 22px;
+    background: repeating-linear-gradient(90deg,
+      #ff0000 0 96px, #ffff00 96px 192px, #00ff00 192px 288px, #00ffff 288px 384px);
+    box-shadow: 0 0 0 3px #000 inset;
+  }
+  #splash::before { top: 0; }
+  #splash::after  { bottom: 0; }
+  /* Centered title with classic chunky pixel drop shadow (white over red over black). */
+  .splash-byline {
+    color: #ffffff; font-size: 14px; letter-spacing: 4px;
+    margin-bottom: 22px; text-shadow: 2px 2px 0 #ff0000;
+  }
+  .splash-title {
+    font-size: 58px; line-height: 1; color: #ffffff;
+    letter-spacing: 8px; margin-bottom: 28px;
+    text-shadow:
+      3px 0  0 #ff0000,
+      0  3px 0 #ff0000,
+      3px 3px 0 #ff0000,
+      6px 6px 0 #000000;
+  }
+  .splash-subtitle {
+    font-size: 14px; color: #00ffff; letter-spacing: 4px;
+    margin-bottom: 26px;
+  }
+  .splash-spec {
+    font-size: 11px; color: #ffff55; letter-spacing: 3px;
+    margin-bottom: 8px;
+  }
+  .splash-spec .v { color: #ffffff; }
+  .splash-prompt {
+    margin-top: 56px;
+    font-size: 14px; color: #ffff55; letter-spacing: 4px;
+    animation: splashBlink 0.9s steps(2) infinite;
+  }
+  @keyframes splashBlink { 50% { opacity: 0; } }
+  .splash-credit {
+    position: absolute; bottom: 38px;
+    font-size: 9px; color: #ffffff; letter-spacing: 3px;
+  }
+  .splash-version {
+    position: absolute; top: 36px; right: 26px;
+    font-size: 9px; color: #ffffff; letter-spacing: 2px;
+  }
+  /* Smaller variants on phones / shorter viewports */
+  @media (max-width: 720px), (max-height: 520px) {
+    .splash-title    { font-size: 36px; letter-spacing: 5px; margin-bottom: 18px; }
+    .splash-byline   { font-size: 10px; margin-bottom: 14px; }
+    .splash-subtitle { font-size: 10px; margin-bottom: 16px; }
+    .splash-spec     { font-size: 9px; }
+    .splash-prompt   { font-size: 11px; margin-top: 30px; }
+    .splash-credit   { bottom: 30px; font-size: 8px; }
+    .splash-version  { top: 30px; right: 12px; font-size: 8px; }
+    #splash::before, #splash::after { height: 14px; }
+  }
   #hud {
     position: absolute; inset: 0; pointer-events: none;
     color: #00ff66; text-shadow: 0 0 6px #00ff66;
@@ -636,6 +707,18 @@
 </style>
 </head>
 <body>
+<!-- ZX Spectrum-style cold-load splash. Sits on top of everything; first
+     keystroke / tap fades it out and reveals the main menu. -->
+<div id="splash">
+  <div class="splash-version">v1.0  ·  48K</div>
+  <div class="splash-byline">© SECTOR COMMAND  198X</div>
+  <div class="splash-title">SPACE WAR</div>
+  <div class="splash-subtitle">A 3D COMBAT SIMULATION</div>
+  <div class="splash-spec">CONTROLS: <span class="v">MOUSE + KEYBOARD</span></div>
+  <div class="splash-spec">MODES: <span class="v">CAMPAIGN  ·  ENDLESS  ·  PVP</span></div>
+  <div class="splash-prompt">▶ PRESS ANY KEY</div>
+  <div class="splash-credit">SPECTRUM EDITION  ·  LOADED FROM TAPE</div>
+</div>
 <div id="cockpit-vignette"></div>
 <div id="cockpit-frame">
   <svg viewBox="0 0 100 100" preserveAspectRatio="none">
@@ -875,6 +958,25 @@ import { RenderPass }     from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import * as NET from './shared/constants.mjs';
 import { stepShip as netStepShip, applyZone as netApplyZone } from './shared/physics.mjs';
+
+// ====== ZX SPECTRUM SPLASH ======
+// The classic tape-load title screen sits over everything until the
+// first key or tap. We bind once-only listeners so the dismissal
+// happens once and any subsequent input flows to the main menu /
+// game as normal.
+const splashEl = document.getElementById('splash');
+if (splashEl) {
+  let dismissed = false;
+  const dismissSplash = () => {
+    if (dismissed) return;
+    dismissed = true;
+    splashEl.classList.add('fading');
+    setTimeout(() => splashEl.remove(), 500);
+  };
+  addEventListener('keydown',    dismissSplash, { once: true });
+  addEventListener('mousedown',  dismissSplash, { once: true });
+  addEventListener('touchstart', dismissSplash, { once: true, passive: true });
+}
 
 // ====== CORE SETUP ======
 const scene = new THREE.Scene();
