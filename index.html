@@ -69,12 +69,34 @@
     margin: 4px 0;
   }
   .splash-spec .v { color: #00ffaa; opacity: 1; }
-  .splash-prompt {
-    margin-top: 26px;
-    font-size: 14px; letter-spacing: 4px;
-    animation: splashBlink 0.9s steps(2) infinite;
+  .splash-start {
+    pointer-events: auto;
+    margin: 26px auto 0; display: inline-block;
+    padding: 12px 28px; border: 1px solid #00ff66;
+    background: rgba(0,30,10,0.4); color: #00ff66;
+    font-family: 'Courier New', monospace; font-size: 16px;
+    letter-spacing: 4px; text-shadow: 0 0 8px #00ff66;
+    cursor: pointer; transition: all 0.12s;
+    animation: splashBtnPulse 1.4s ease-in-out infinite;
   }
-  @keyframes splashBlink { 50% { opacity: 0.25; } }
+  .splash-start:hover {
+    background: rgba(0,255,102,0.22);
+    box-shadow: 0 0 18px rgba(0,255,102,0.55);
+    animation: none;
+  }
+  @keyframes splashBtnPulse {
+    0%, 100% { box-shadow: 0 0 8px rgba(0,255,102,0.3); }
+    50%      { box-shadow: 0 0 18px rgba(0,255,102,0.65); }
+  }
+  .splash-hint {
+    margin-top: 14px; font-size: 11px; letter-spacing: 3px;
+    opacity: 0.55;
+  }
+  .splash-hint .key {
+    display: inline-block; padding: 1px 7px;
+    border: 1px solid #00ff66; margin: 0 3px;
+    color: #00ffaa; opacity: 0.9;
+  }
   .splash-credit {
     position: absolute; bottom: 28px; z-index: 1;
     font-size: 10px; letter-spacing: 3px; opacity: 0.7;
@@ -742,7 +764,8 @@
     <div class="splash-divider"></div>
     <div class="splash-spec">CONTROLS: <span class="v">MOUSE + KEYBOARD / TOUCH</span></div>
     <div class="splash-spec">MODES: <span class="v">CAMPAIGN · ENDLESS · PVP</span></div>
-    <div class="splash-prompt">▶ PRESS ANY KEY</div>
+    <button class="splash-start" id="splash-start" type="button">▶ START</button>
+    <div class="splash-hint">OR PRESS <span class="key">SPACE</span></div>
   </div>
   <div class="splash-credit">
     <a class="splash-link" href="https://www.terekhindt.com" target="_blank" rel="noopener noreferrer">www.terekhindt.com</a>
@@ -1002,18 +1025,23 @@ if (splashEl) {
     splashEl.classList.add('fading');
     setTimeout(() => splashEl.remove(), 500);
   };
-  addEventListener('keydown',    dismissSplash, { once: true });
-  addEventListener('mousedown',  dismissSplash, { once: true });
-  addEventListener('touchstart', dismissSplash, { once: true, passive: true });
-  // The studio link should open the website without dismissing the
-  // splash — let the user follow it and still see the splash when
-  // the new tab takes focus away. stopPropagation keeps the window-
-  // level dismiss handlers from firing.
-  for (const a of splashEl.querySelectorAll('.splash-link')) {
-    a.addEventListener('mousedown',  e => e.stopPropagation());
-    a.addEventListener('touchstart', e => e.stopPropagation(), { passive: true });
-    a.addEventListener('click',      e => e.stopPropagation());
+  // Only the START button (click / tap) and the SPACE key dismiss the
+  // splash. Random keystrokes / clicks on the background do nothing,
+  // so the player can read the studio credit and open the link without
+  // accidentally hammering past the title.
+  const startBtn = document.getElementById('splash-start');
+  if (startBtn) {
+    startBtn.addEventListener('click', e => { e.stopPropagation(); dismissSplash(); });
+    startBtn.addEventListener('touchstart', e => { e.stopPropagation(); dismissSplash(); }, { passive: true });
   }
+  const splashKeyHandler = e => {
+    if (e.code === 'Space') {
+      e.preventDefault();
+      removeEventListener('keydown', splashKeyHandler);
+      dismissSplash();
+    }
+  };
+  addEventListener('keydown', splashKeyHandler);
 }
 
 // ====== CORE SETUP ======
