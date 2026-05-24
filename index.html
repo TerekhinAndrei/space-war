@@ -7,6 +7,27 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <title>SPACE WAR — Retro 3D Combat Simulator</title>
+<meta name="description" content="Retro 3D space-combat simulator in the spirit of Elite (1984) and Spacewar! Free-flight dogfights, squadron AI, a four-mission campaign, an upgrade economy, 32 achievements and a 2–4 player FFA deathmatch — all in a single self-contained HTML page.">
+<meta name="keywords" content="space war, retro game, 3d game, elite, spacewar, threejs, browser game, multiplayer, free-for-all, ffa, deathmatch, wireframe, web game">
+<meta name="author" content="Terekhin Digital Crew">
+<!-- Open Graph (Facebook / LinkedIn / Telegram / Discord) -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SPACE WAR">
+<meta property="og:title" content="SPACE WAR — Retro 3D Combat Simulator">
+<meta property="og:description" content="Free-flight dogfights, four-mission campaign and 2–4 player FFA deathmatch in one self-contained HTML page. By Terekhin Digital Crew.">
+<meta property="og:url" content="https://terekhinandrei.github.io/space-war/">
+<meta property="og:image" content="https://terekhinandrei.github.io/space-war/preview.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="SPACE WAR retro vector wireframe title screen, green-on-black CRT aesthetic">
+<!-- Twitter / X -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="SPACE WAR — Retro 3D Combat Simulator">
+<meta name="twitter:description" content="Six-degree-of-freedom dogfights, a four-mission campaign, 32 achievements and 2–4 player FFA — in one HTML page.">
+<meta name="twitter:image" content="https://terekhinandrei.github.io/space-war/preview.png">
+<!-- Inline SVG favicon — a glowing green ship triangle. No extra request. -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cdefs%3E%3Cfilter%20id%3D%22g%22%3E%3CfeGaussianBlur%20stdDeviation%3D%221.5%22%2F%3E%3C%2Ffilter%3E%3C%2Fdefs%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%23000%22%2F%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%2300ff66%22%20stroke-width%3D%222%22%20filter%3D%22url(%23g)%22%3E%3Cpath%20d%3D%22M32%208%20L52%2052%20L32%2044%20L12%2052%20Z%22%2F%3E%3C%2Fg%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%2300ff66%22%20stroke-width%3D%221.2%22%3E%3Cpath%20d%3D%22M32%208%20L52%2052%20L32%2044%20L12%2052%20Z%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E">
+<link rel="canonical" href="https://terekhinandrei.github.io/space-war/">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Courier New', monospace; }
@@ -928,6 +949,7 @@
       <div class="menu-btn" id="mb-ach">★ ACHIEVEMENTS</div>
       <div class="menu-btn" id="mb-settings">⚙ SETTINGS</div>
       <div class="menu-btn" id="mb-help">? HOW TO PLAY</div>
+      <div class="menu-btn" id="mb-share">⤴ SHARE GAME</div>
     </div>
     <p style="opacity:0.85">HI: <span id="title-hiscore">0</span> · CREDITS: <span id="title-credits">0</span></p>
   </div>
@@ -3255,6 +3277,33 @@ document.getElementById('mb-ms-ach').addEventListener('click', e => { e.stopProp
 document.getElementById('mb-ach-back').addEventListener('click', e => { e.stopPropagation(); closeAchievements(); });
 document.getElementById('mb-mp').addEventListener('click', e => { e.stopPropagation(); showMultiplayer(); });
 document.getElementById('mb-mp-back').addEventListener('click', e => { e.stopPropagation(); closeMultiplayer(); });
+document.getElementById('mb-share').addEventListener('click', e => { e.stopPropagation(); shareGame(); });
+
+// SHARE — prefer the native Web Share sheet on mobile / Chrome; fall
+// back to copying the URL to the clipboard with a toast confirmation.
+const SHARE_URL  = 'https://terekhinandrei.github.io/space-war/';
+const SHARE_TEXT = 'Play SPACE WAR — retro 3D dogfight in your browser. Campaign + 2-4 player PvP, no install.';
+async function shareGame() {
+  const data = {
+    title: 'SPACE WAR — Retro 3D Combat Simulator',
+    text: SHARE_TEXT,
+    url: SHARE_URL,
+  };
+  try {
+    if (navigator.share && (!navigator.canShare || navigator.canShare(data))) {
+      await navigator.share(data);
+      return;
+    }
+  } catch (_e) {
+    // user cancelled — silent
+  }
+  try {
+    await navigator.clipboard.writeText(SHARE_URL);
+    showToast('LINK COPIED — share with your wingmen', '#00ffaa');
+  } catch {
+    showToast('Copy the URL from your address bar', '#ffaa44');
+  }
+}
 function renderShop() {
   document.getElementById('shop-credits').textContent = save.credits;
   const list = document.getElementById('shop-list');
@@ -4634,6 +4683,7 @@ function showTitleMenu() {
       <div class="menu-btn" id="mb-ach">★ ACHIEVEMENTS</div>
       <div class="menu-btn" id="mb-settings">⚙ SETTINGS</div>
       <div class="menu-btn" id="mb-help">? HOW TO PLAY</div>
+      <div class="menu-btn" id="mb-share">⤴ SHARE GAME</div>
     </div>
     <p style="opacity:0.85">HI: <span id="title-hiscore">${save.highScore}</span> · CREDITS: <span id="title-credits">${save.credits}</span></p>
   `;
@@ -4644,6 +4694,7 @@ function showTitleMenu() {
   document.getElementById('mb-ach').addEventListener('click', e => { e.stopPropagation(); showAchievements(); });
   document.getElementById('mb-settings').addEventListener('click', e => { e.stopPropagation(); showSettings(); });
   document.getElementById('mb-help').addEventListener('click', e => { e.stopPropagation(); showHelp(); });
+  document.getElementById('mb-share').addEventListener('click', e => { e.stopPropagation(); shareGame(); });
   updateCreditsHUD();
 }
 

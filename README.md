@@ -1,13 +1,49 @@
 # SPACE WAR
 
+![SPACE WAR — promo](./preview.png)
+
 A retro 3D space-combat arcade game — a single self-contained `index.html`
 built with [Three.js](https://threejs.org/). Six-degrees-of-freedom dogfighting,
-a four-mission campaign, an upgrade economy and 32 achievements, in the spirit
-of *Elite* (1984) and *Spacewar!*.
+a four-mission campaign, an upgrade economy, 32 achievements **and a 2–4 player
+free-for-all deathmatch**, in the spirit of *Elite* (1984) and *Spacewar!*.
 
-**▶ Play it now: https://terekhinandrei.github.io/space-war/**
+**▶ Play it now: <https://terekhinandrei.github.io/space-war/>**
 
-No build step, no dependencies to install — open the file and fly.
+No build step, no install — open the link and fly. A production of
+[Terekhin Digital Crew](https://www.terekhindt.com).
+
+---
+
+## Share it
+
+The link is the shareable artefact:
+
+> **Play SPACE WAR — retro 3D dogfight in your browser. Campaign + 2-4
+> player PvP, no install.**
+> <https://terekhinandrei.github.io/space-war/>
+
+Open Graph / Twitter Card metadata is wired in — pasting the URL into
+Discord, Telegram, Slack, X / Twitter, LinkedIn, Facebook or iMessage
+produces a rich preview card with the `preview.png` promo image, title,
+and description.
+
+On the title screen there's also a **⤴ SHARE GAME** button: on
+mobile / Chrome it opens the native share sheet; everywhere else it
+copies the link to the clipboard.
+
+### Where to post
+
+- **itch.io** — upload `index.html` + `preview.png` + `server/` +
+  `shared/` as a zip, or paste the live URL. Tag *space*,
+  *multiplayer*, *retro*, *threejs*, *wireframe*.
+- **r/WebGames, r/IndieDev, r/PromoteYourGame, r/incremental_games**
+  — Reddit communities that welcome browser-game posts.
+- **Hacker News (Show HN)** — works well for the "single HTML file +
+  Three.js + multiplayer" angle.
+- **TIGSource forums**, **devlog Twitter / Bluesky** — long-form posts
+  about the build (Phases 0-5 of the multiplayer plan are good
+  material).
+- **r/ThreeJS, r/PartyKit** — engine / runtime specific audiences.
 
 ---
 
