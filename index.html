@@ -153,14 +153,60 @@
     from { opacity: 0; transform: translateY(-12px); }
     to   { opacity: 1; transform: translateY(0); }
   }
-  #shop-overlay, #mission-overlay, #settings-overlay, #help-overlay, #ach-overlay {
+  #shop-overlay, #mission-overlay, #settings-overlay, #help-overlay, #ach-overlay, #mp-overlay {
     position: absolute; inset: 0; background: rgba(0, 0, 0, 0.92);
     display: none; align-items: center; justify-content: center;
     z-index: 12; color: #00ff66; font-family: 'Courier New', monospace;
     text-shadow: 0 0 8px #00ff66;
   }
   #mission-overlay { z-index: 11; }
-  #settings-overlay, #help-overlay, #ach-overlay { z-index: 13; }
+  #settings-overlay, #help-overlay, #ach-overlay, #mp-overlay { z-index: 13; }
+  /* --- MULTIPLAYER lobby --- */
+  #mp-overlay .box {
+    border: 1px solid #00ff66; padding: 28px 38px;
+    box-shadow: 0 0 30px rgba(0,255,102,0.35);
+    min-width: 460px; max-width: 540px;
+  }
+  #mp-overlay h1 { font-size: 40px; letter-spacing: 6px; margin-bottom: 6px; }
+  #mp-overlay h2 { font-size: 12px; letter-spacing: 3px; margin-bottom: 18px; opacity: 0.7; }
+  .mp-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 14px; padding: 10px 14px; border: 1px solid #00ff66; margin: 8px 0;
+  }
+  .mp-row .mp-label { font-weight: bold; letter-spacing: 2px; font-size: 12px; }
+  .mp-input {
+    background: rgba(0,30,10,0.5); border: 1px solid #00ff66; color: #00ff66;
+    font-family: 'Courier New', monospace; font-size: 14px; letter-spacing: 2px;
+    padding: 7px 10px; text-shadow: 0 0 6px #00ff66; outline: none;
+    pointer-events: auto;
+  }
+  .mp-input:focus { box-shadow: 0 0 10px rgba(0,255,102,0.55); }
+  .mp-code-display {
+    text-align: center; padding: 12px 18px; margin: 10px 0;
+    border: 1px solid #ffcc44; background: rgba(40,30,0,0.4);
+    color: #ffcc44; text-shadow: 0 0 10px #ffcc44;
+    font-size: 28px; letter-spacing: 12px; font-weight: bold;
+  }
+  .mp-hint { font-size: 11px; opacity: 0.6; text-align: center; margin: 10px 0; }
+  .mp-status { font-size: 12px; letter-spacing: 2px; text-align: center; margin: 12px 0; }
+  .mp-status.err { color: #ff4466; text-shadow: 0 0 8px #ff4466; }
+  .mp-peers {
+    display: flex; flex-direction: column; gap: 5px;
+    max-height: 180px; overflow-y: auto; margin: 8px 0;
+  }
+  .mp-peer {
+    display: flex; align-items: center; gap: 10px;
+    padding: 7px 12px; border: 1px solid rgba(0,255,102,0.4);
+    background: rgba(0,30,10,0.3); font-size: 13px;
+  }
+  .mp-peer .mp-dot { width: 10px; height: 10px; border-radius: 50%;
+    box-shadow: 0 0 6px currentColor; flex-shrink: 0; }
+  .mp-peer .mp-callsign { letter-spacing: 1px; flex: 1; }
+  .mp-peer .mp-you { font-size: 10px; opacity: 0.6; }
+  .menu-btn.disabled {
+    opacity: 0.35; cursor: not-allowed; pointer-events: none;
+    box-shadow: none;
+  }
   /* --- ACHIEVEMENTS screen --- */
   #ach-overlay .box {
     border: 1px solid #00ff66; padding: 28px 38px;
@@ -387,13 +433,13 @@
   body.touch #toasts { top: 66px; left: 10px; transform: none; align-items: flex-start; }
   body.touch .toast { font-size: 11px; padding: 5px 12px; }
   body.touch #overlay .box, body.touch #shop-overlay .box, body.touch #mission-overlay .box,
-  body.touch #settings-overlay .box, body.touch #help-overlay .box, body.touch #ach-overlay .box {
+  body.touch #settings-overlay .box, body.touch #help-overlay .box, body.touch #ach-overlay .box, body.touch #mp-overlay .box {
     min-width: 0; max-width: 94vw; padding: 18px 22px;
   }
   body.touch #overlay h1, body.touch #mission-overlay h1, body.touch #shop-overlay h1,
-  body.touch #settings-overlay h1, body.touch #help-overlay h1, body.touch #ach-overlay h1 { font-size: 32px; }
+  body.touch #settings-overlay h1, body.touch #help-overlay h1, body.touch #ach-overlay h1, body.touch #mp-overlay h1 { font-size: 32px; }
   body.touch #overlay p, body.touch #mission-overlay .m-brief, body.touch #help-overlay p { font-size: 11px; }
-  body.touch #mission-overlay .box, body.touch #help-overlay .box, body.touch #ach-overlay .box { max-height: 92vh; overflow-y: auto; }
+  body.touch #mission-overlay .box, body.touch #help-overlay .box, body.touch #ach-overlay .box, body.touch #mp-overlay .box { max-height: 92vh; overflow-y: auto; }
   /* Control-hint blocks: show only the relevant input scheme */
   .help-touch { display: none; }
   body.touch .help-desktop { display: none; }
@@ -410,11 +456,11 @@
      out-specify the base body.touch overlay rules above. */
   @media (max-height: 440px) {
     body.touch #overlay .box, body.touch #shop-overlay .box, body.touch #mission-overlay .box,
-    body.touch #settings-overlay .box, body.touch #help-overlay .box, body.touch #ach-overlay .box { padding: 12px 22px; }
+    body.touch #settings-overlay .box, body.touch #help-overlay .box, body.touch #ach-overlay .box, body.touch #mp-overlay .box { padding: 12px 22px; }
     body.touch #overlay h1, body.touch #mission-overlay h1, body.touch #shop-overlay h1,
-    body.touch #settings-overlay h1, body.touch #help-overlay h1, body.touch #ach-overlay h1 { font-size: 22px; letter-spacing: 4px; margin-bottom: 4px; }
+    body.touch #settings-overlay h1, body.touch #help-overlay h1, body.touch #ach-overlay h1, body.touch #mp-overlay h1 { font-size: 22px; letter-spacing: 4px; margin-bottom: 4px; }
     body.touch #overlay h2, body.touch #mission-overlay h2, body.touch #shop-overlay h2,
-    body.touch #settings-overlay h2, body.touch #help-overlay h2, body.touch #ach-overlay h2 { margin-bottom: 8px; font-size: 10px; }
+    body.touch #settings-overlay h2, body.touch #help-overlay h2, body.touch #ach-overlay h2, body.touch #mp-overlay h2 { margin-bottom: 8px; font-size: 10px; }
     body.touch #overlay p, body.touch #help-overlay p { margin: 1px 0; line-height: 1.5; }
     body.touch #overlay .start { margin-top: 10px; }
     body.touch #mission-list { gap: 5px; margin: 8px 0; }
@@ -539,6 +585,7 @@
     <h2>RETRO 3D COMBAT SIMULATOR</h2>
     <div class="menu-btns">
       <div class="menu-btn primary" id="mb-missions">▶ MISSIONS</div>
+      <div class="menu-btn" id="mb-mp">⚔ MULTIPLAYER</div>
       <div class="menu-btn" id="mb-ach">★ ACHIEVEMENTS</div>
       <div class="menu-btn" id="mb-settings">⚙ SETTINGS</div>
       <div class="menu-btn" id="mb-help">? HOW TO PLAY</div>
@@ -566,6 +613,17 @@
     <div id="ach-list"></div>
     <div class="menu-btns" style="margin-top:14px">
       <div class="menu-btn" id="mb-ach-back">◀ BACK</div>
+    </div>
+  </div>
+</div>
+
+<div id="mp-overlay">
+  <div class="box">
+    <h1>MULTIPLAYER</h1>
+    <h2>PVP DEATHMATCH · 2–4 PILOTS</h2>
+    <div id="mp-body"></div>
+    <div class="menu-btns" style="margin-top:14px">
+      <div class="menu-btn" id="mb-mp-back">◀ BACK</div>
     </div>
   </div>
 </div>
@@ -1360,6 +1418,7 @@ const DEFAULT_SAVE = {
   // Lifetime career counters — feed cumulative achievements.
   stats: { kills: 0, pickups: 0, deaths: 0, docks: 0, typesKilled: [] },
   achievements: {},      // id -> true once unlocked
+  callsign: '',          // multiplayer pilot name — set on first MP visit
 };
 let save = JSON.parse(JSON.stringify(DEFAULT_SAVE));
 try {
@@ -1374,6 +1433,7 @@ try {
     save.achievements = (parsed.achievements && typeof parsed.achievements === 'object') ? parsed.achievements : {};
     save.missionsCleared = parsed.missionsCleared || [];
     save.campaignDone = !!parsed.campaignDone;
+    save.callsign = typeof parsed.callsign === 'string' ? parsed.callsign : '';
   }
 } catch {}
 applyGraphics();   // act on the saved graphics preset now that `save` exists
@@ -1728,6 +1788,172 @@ function renderSettings() {
     list.appendChild(row);
   }
 }
+// ====== MULTIPLAYER LOBBY ======
+// Phase 0c: lobby over WebSocket to the PartyKit room. Pick a callsign,
+// create a room (random 4-letter code) or join one, see other connected
+// pilots. The match start lights up once Phase 2 (server simulation)
+// lands; for now it's a placeholder.
+const MP_URL = 'wss://space-war.terekhinandrei.partykit.dev';
+const MP_CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // skip O/0/I/1
+const MP = {
+  ws: null,
+  status: 'idle',      // 'idle' | 'connecting' | 'in-room' | 'error'
+  roomId: null,
+  myId: null,
+  peers: [],
+  err: '',
+  pingTimer: null,
+  rtt: null,
+};
+function mpRandom(n) {
+  let s = '';
+  for (let i = 0; i < n; i++)
+    s += MP_CODE_ALPHABET[Math.floor(Math.random() * MP_CODE_ALPHABET.length)];
+  return s;
+}
+function randomCallsign() { return 'PILOT-' + mpRandom(4); }
+function showMultiplayer() {
+  if (!save.callsign) { save.callsign = randomCallsign(); persistSave(); }
+  document.getElementById('mp-overlay').style.display = 'flex';
+  if (document.pointerLockElement) document.exitPointerLock();
+  // Always start at the lobby screen — never resume a stale room.
+  mpDisconnect();
+  MP.status = 'idle'; MP.err = '';
+  renderMP();
+}
+function closeMultiplayer() {
+  document.getElementById('mp-overlay').style.display = 'none';
+  mpDisconnect();
+  MP.status = 'idle';
+}
+function mpSetStatus(s, err) {
+  MP.status = s;
+  MP.err = err || '';
+  renderMP();
+}
+function mpConnect(roomId) {
+  mpDisconnect();
+  MP.roomId = roomId;
+  mpSetStatus('connecting');
+  let ws;
+  try {
+    ws = new WebSocket(`${MP_URL}/parties/main/${encodeURIComponent(roomId)}`);
+  } catch {
+    mpSetStatus('error', 'Could not open WebSocket');
+    return;
+  }
+  MP.ws = ws;
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ t: 'JOIN', callsign: save.callsign }));
+    // Heartbeat — gives us a live RTT reading next to the YOU tag.
+    MP.pingTimer = setInterval(() => {
+      if (ws.readyState === 1) ws.send(JSON.stringify({ t: 'PING', clientSent: Date.now() }));
+    }, 3000);
+  };
+  ws.onmessage = ev => {
+    let m;
+    try { m = JSON.parse(ev.data); } catch { return; }
+    if (m.t === 'WELCOME') {
+      MP.myId = m.id;
+      MP.peers = Array.isArray(m.peers) ? m.peers : [];
+      mpSetStatus('in-room');
+    } else if (m.t === 'PEERS') {
+      MP.peers = Array.isArray(m.peers) ? m.peers : [];
+      renderMP();
+    } else if (m.t === 'PONG') {
+      MP.rtt = Date.now() - m.clientSent;
+      renderMP();
+    }
+  };
+  ws.onerror = () => { /* close will follow — handle there */ };
+  ws.onclose = e => {
+    if (MP.pingTimer) { clearInterval(MP.pingTimer); MP.pingTimer = null; }
+    MP.ws = null;
+    if (MP.status === 'connecting') {
+      mpSetStatus('error', `Connection failed (code ${e.code})`);
+    } else if (MP.status === 'in-room') {
+      mpSetStatus('idle');
+    }
+  };
+}
+function mpDisconnect() {
+  if (MP.pingTimer) { clearInterval(MP.pingTimer); MP.pingTimer = null; }
+  if (MP.ws) {
+    try { MP.ws.onclose = null; MP.ws.close(); } catch {}
+    MP.ws = null;
+  }
+  MP.peers = [];
+  MP.roomId = null;
+  MP.myId = null;
+  MP.rtt = null;
+}
+function mpCreateRoom() { mpConnect(mpRandom(4)); }
+function mpJoinRoom() {
+  const input = document.getElementById('mp-join-code');
+  if (!input) return;
+  const code = input.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+  if (code.length < 4) { mpSetStatus('error', 'Code must be 4–6 letters/digits'); return; }
+  mpConnect(code);
+}
+function escMP(s) { return String(s).replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function renderMP() {
+  const body = document.getElementById('mp-body');
+  if (!body) return;
+  if (MP.status === 'idle' || MP.status === 'error') {
+    const cs = save.callsign || '';
+    const errLine = MP.status === 'error'
+      ? `<div class="mp-status err">${escMP(MP.err || 'Connection failed')}</div>` : '';
+    body.innerHTML =
+      `<div class="mp-row"><span class="mp-label">CALLSIGN</span>` +
+      `<input class="mp-input" id="mp-callsign" maxlength="12" value="${escMP(cs)}" /></div>` +
+      `<div class="menu-btns" style="margin-top:14px;max-width:none">` +
+        `<div class="menu-btn primary" id="mp-create">▶ CREATE ROOM</div>` +
+      `</div>` +
+      `<div class="mp-row" style="margin-top:14px"><span class="mp-label">JOIN CODE</span>` +
+        `<input class="mp-input" id="mp-join-code" maxlength="6" placeholder="ABCD" style="text-transform:uppercase;width:130px" />` +
+        `<div class="menu-btn" id="mp-join" style="margin:0">JOIN</div>` +
+      `</div>` +
+      errLine +
+      `<p class="mp-hint">Share the room code with friends. 2–4 pilots per match.</p>`;
+    const csInput = document.getElementById('mp-callsign');
+    csInput.addEventListener('input', () => {
+      save.callsign = csInput.value.slice(0, 12); persistSave();
+    });
+    document.getElementById('mp-create').addEventListener('click', e => { e.stopPropagation(); mpCreateRoom(); });
+    document.getElementById('mp-join').addEventListener('click', e => { e.stopPropagation(); mpJoinRoom(); });
+    document.getElementById('mp-join-code').addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.stopPropagation(); mpJoinRoom(); }
+    });
+  } else if (MP.status === 'connecting') {
+    body.innerHTML = `<div class="mp-status">CONNECTING TO ${escMP(MP.roomId)}...</div>`;
+  } else if (MP.status === 'in-room') {
+    const peerRows = MP.peers.map(p => {
+      const me = p.id === MP.myId;
+      const c = (p.color && /^#[0-9a-fA-F]{6}$/.test(p.color)) ? p.color : '#00ff66';
+      return `<div class="mp-peer" style="border-color:${c}80">` +
+             `<span class="mp-dot" style="color:${c};background:${c}"></span>` +
+             `<span class="mp-callsign">${escMP(p.callsign || 'PILOT')}</span>` +
+             (me ? `<span class="mp-you">YOU${MP.rtt != null ? ' · ' + MP.rtt + ' ms' : ''}</span>` : '') +
+             `</div>`;
+    }).join('');
+    body.innerHTML =
+      `<div class="mp-code-display">${escMP(MP.roomId)}</div>` +
+      `<p class="mp-hint">Send this code to your friends to invite them.</p>` +
+      `<div class="mp-status">${MP.peers.length}/4 PILOTS IN ROOM</div>` +
+      `<div class="mp-peers">${peerRows}</div>` +
+      `<div class="menu-btns" style="margin-top:14px;max-width:none">` +
+        `<div class="menu-btn primary disabled" id="mp-start" title="Match flow lands in Phase 2">▶ START MATCH (PHASE 2)</div>` +
+        `<div class="menu-btn" id="mp-leave">◀ LEAVE ROOM</div>` +
+      `</div>`;
+    document.getElementById('mp-leave').addEventListener('click', e => {
+      e.stopPropagation(); mpDisconnect(); mpSetStatus('idle');
+    });
+  }
+}
+// Close the room cleanly if the tab goes away.
+addEventListener('beforeunload', () => { mpDisconnect(); });
+
 // Wire the menu buttons (all static HTML, present at load).
 document.getElementById('mb-missions').addEventListener('click', e => { e.stopPropagation(); showMissionSelect(); });
 document.getElementById('mb-settings').addEventListener('click', e => { e.stopPropagation(); showSettings(); });
@@ -1740,6 +1966,8 @@ document.getElementById('mb-help-back').addEventListener('click', e => { e.stopP
 document.getElementById('mb-ach').addEventListener('click', e => { e.stopPropagation(); showAchievements(); });
 document.getElementById('mb-ms-ach').addEventListener('click', e => { e.stopPropagation(); showAchievements(); });
 document.getElementById('mb-ach-back').addEventListener('click', e => { e.stopPropagation(); closeAchievements(); });
+document.getElementById('mb-mp').addEventListener('click', e => { e.stopPropagation(); showMultiplayer(); });
+document.getElementById('mb-mp-back').addEventListener('click', e => { e.stopPropagation(); closeMultiplayer(); });
 function renderShop() {
   document.getElementById('shop-credits').textContent = save.credits;
   const list = document.getElementById('shop-list');
@@ -2403,6 +2631,7 @@ addEventListener('keydown', e => {
   if (e.code === 'Escape') {
     if (document.getElementById('help-overlay').style.display === 'flex') { closeHelp(); return; }
     if (document.getElementById('ach-overlay').style.display === 'flex') { closeAchievements(); return; }
+    if (document.getElementById('mp-overlay').style.display === 'flex') { closeMultiplayer(); return; }
     if (document.getElementById('settings-overlay').style.display === 'flex') { closeSettings(); return; }
     if (document.getElementById('shop-overlay').style.display === 'flex') { closeShop(); return; }
     if (started && player.hull > 0 && !paused) pauseGame();
