@@ -201,23 +201,53 @@ export default class SpaceWarRoom implements Party.Server {
         this.broadcastPeers();
         return;
       }
-      case "START_MATCH":
+      case "START_MATCH": {
+        const peers = this.peers();
+        console.log(`[${this.room.id}] START_MATCH from ${sender.id} (phase=${this.phase}, peers=${peers.length})`);
+        if (this.phase !== "WAITING") {
+          sender.send(JSON.stringify({
+            t: "START_REJECTED",
+            reason: `MATCH ALREADY ${this.phase} — WAIT FOR LOBBY`,
+          }));
+          return;
+        }
+        if (peers.length < C.MIN_PLAYERS_TO_START) {
+          sender.send(JSON.stringify({
+            t: "START_REJECTED",
+            reason: `NEED ${C.MIN_PLAYERS_TO_START} PILOTS — HAVE ${peers.length}`,
+          }));
+          return;
+        }
         this.startMatch();
         return;
+      }
       case "INPUT":
         this.acceptInput(sender.id, msg as InputMsg);
         return;
     }
   }
 
-  onClose(_conn: Party.Connection<ConnState>) {
-    // Mid-match disconnect — leave their PlayerState dead so the snapshot
-    // stops showing them but the existing kills/score history stays intact
-    // for the scoreboard. Their input slot is cleared.
+  onClose(conn: Party.Connection<ConnState>) {
     this.broadcastPeers();
     if (this.peers().length === 0) {
       // Empty room — tear down any running match.
       this.fullReset();
+      return;
+    }
+    // Mid-match disconnect — drop the leaver from the sim. If the number
+    // of still-connected players drops below the start minimum, end the
+    // match early so the remaining pilot isn't stranded waiting for the
+    // 3-minute timer (which would also block new matches from starting).
+    if (this.phase === "MATCH" || this.phase === "COUNTDOWN") {
+      this.players.delete(conn.id);
+      this.inputs.delete(conn.id);
+      const live = new Set([...this.room.getConnections()].map((c) => c.id));
+      let active = 0;
+      for (const id of this.players.keys()) if (live.has(id)) active++;
+      if (active < C.MIN_PLAYERS_TO_START) {
+        console.log(`[${this.room.id}] auto-ending match — only ${active} active player(s) left`);
+        this.endMatch();
+      }
     }
   }
 

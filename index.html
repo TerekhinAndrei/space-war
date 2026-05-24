@@ -1952,6 +1952,7 @@ const MP = {
   roomId: null,
   myId: null,
   peers: [],
+  phase: 'WAITING',    // mirrors the server's match phase
   err: '',
   pingTimer: null,
   rtt: null,
@@ -2004,6 +2005,7 @@ function mpConnect(roomId) {
   ws.onmessage = ev => {
     let m;
     try { m = JSON.parse(ev.data); } catch { return; }
+    if (typeof m.phase === 'string') MP.phase = m.phase;
     if (m.t === 'WELCOME') {
       MP.myId = m.id;
       MP.peers = Array.isArray(m.peers) ? m.peers : [];
@@ -2014,13 +2016,18 @@ function mpConnect(roomId) {
     } else if (m.t === 'PONG') {
       MP.rtt = Date.now() - m.clientSent;
       renderMP();
+    } else if (m.t === 'START_REJECTED') {
+      showToast(m.reason || 'COULD NOT START MATCH', '#ff4466');
     } else if (m.t === 'MATCH_START') {
+      MP.phase = 'COUNTDOWN';
       pvpEnter(m);
     } else if (m.t === 'SNAPSHOT') {
       pvpHandleSnapshot(m);
     } else if (m.t === 'MATCH_END') {
+      MP.phase = 'END';
       pvpHandleMatchEnd(m);
     } else if (m.t === 'LOBBY') {
+      MP.phase = 'WAITING';
       pvpHandleLobby();
     }
   };
@@ -2045,6 +2052,7 @@ function mpDisconnect() {
   MP.roomId = null;
   MP.myId = null;
   MP.rtt = null;
+  MP.phase = 'WAITING';
 }
 function mpCreateRoom() { mpConnect(mpRandom(4)); }
 function mpJoinRoom() {
@@ -2096,10 +2104,13 @@ function renderMP() {
              (me ? `<span class="mp-you">YOU${MP.rtt != null ? ' · ' + MP.rtt + ' ms' : ''}</span>` : '') +
              `</div>`;
     }).join('');
-    const canStart = MP.peers.length >= NET.MIN_PLAYERS_TO_START;
-    const startLabel = canStart
-      ? '▶ START MATCH'
-      : `▶ START MATCH (NEED ${NET.MIN_PLAYERS_TO_START - MP.peers.length} MORE)`;
+    const inMatch = MP.phase && MP.phase !== 'WAITING';
+    const canStart = !inMatch && MP.peers.length >= NET.MIN_PLAYERS_TO_START;
+    const startLabel = inMatch
+      ? `▶ MATCH ${MP.phase} — WAIT FOR LOBBY`
+      : canStart
+        ? '▶ START MATCH'
+        : `▶ START MATCH (NEED ${NET.MIN_PLAYERS_TO_START - MP.peers.length} MORE)`;
     body.innerHTML =
       `<div class="mp-code-display">${escMP(MP.roomId)}</div>` +
       `<p class="mp-hint">Send this code to your friends to invite them.</p>` +
