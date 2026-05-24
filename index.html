@@ -212,11 +212,12 @@
   body.pvp #pvp-hud { display: block; }
   /* Hide single-player HUD panels while in a match — the PvP HUD above
      provides its own bars, score and labels. Keep #crosshair so the
-     player can aim, and #toasts so achievement unlocks still pop. */
+     player can aim, keep #cockpit-frame / #cockpit-vignette for visual
+     continuity, and keep #zone-warning so the boundary alert works
+     identically to single-player. */
   body.pvp #top-left, body.pvp #top-right, body.pvp #bottom-left,
   body.pvp #bottom-right, body.pvp #radar, body.pvp #mission-hud,
-  body.pvp #cockpit-frame, body.pvp #cockpit-vignette,
-  body.pvp #lead, body.pvp #dock-prompt, body.pvp #zone-warning { display: none !important; }
+  body.pvp #lead, body.pvp #dock-prompt { display: none !important; }
   #pvp-top {
     position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
     color: #00ff66; font-family: 'Courier New', monospace; text-align: center;
@@ -2289,20 +2290,35 @@ function pvpHandleSnapshot(m) {
 }
 
 function pvpPlayFireFx(f) {
-  // Lightweight: rely on bullet meshes from the next snapshot.
-  // A laser sound when the shooter isn't you would be nice but
-  // we already play the local one on input — sounds for remotes:
-  if (f.shooter !== PVP.myId && audioCtx && typeof playPulse === 'function') {
-    // small chirp for remote shots so you hear them firing
-    const ps = PVP.players.get(f.shooter);
-    if (ps) try { playLaser(ps.obj.position); } catch {}
-  }
+  if (!audioCtx) return;
+  // Server confirms every shot — own or remote — so this is also when WE
+  // hear our own laser. Slight latency (~half RTT) but identical handling
+  // keeps the audio consistent on both sides.
+  const ps = PVP.players.get(f.shooter);
+  const pos = ps && ps.obj ? ps.obj.position : new THREE.Vector3(f.pos.x, f.pos.y, f.pos.z);
+  const w = NET.WEAPONS[f.weapon] || NET.WEAPONS[0];
+  try {
+    if (w && w.id === 'pulse') playPulse(pos);
+    else playLaser(pos);
+  } catch {}
+  if (f.shooter === PVP.myId && typeof addShake === 'function') addShake(0.04);
 }
 
 function pvpPlayHitFx(h) {
-  // Quick spark explosion at the hit point.
+  // Small spark explosion at the hit point, plus a hull/shield SFX on the
+  // local player so getting shot feels like getting shot.
   if (typeof spawnExplosion === 'function') {
     spawnExplosion(new THREE.Vector3(h.pos.x, h.pos.y, h.pos.z), 0xffcc44, 0.4);
+  }
+  if (h.victim === PVP.myId) {
+    const me = PVP.players.get(PVP.myId);
+    const hadShield = me && me.shield > 0;
+    try {
+      if (hadShield && typeof playShieldHit === 'function') playShieldHit();
+      else if (typeof playHullHit === 'function') playHullHit();
+    } catch {}
+    if (typeof addShake === 'function') addShake(hadShield ? 0.25 : 0.5);
+    if (typeof flashDamage === 'function') flashDamage();
   }
 }
 
@@ -2428,6 +2444,11 @@ function pvpRenderFromSnapshots() {
     if (ps.obj) {
       ps.obj.position.set(px, py, pz);
       ps.obj.quaternion.set(qx, qy, qz, qw);
+    }
+    if (ps.local) {
+      // Mirror the server's velocity onto player.velocity so engine sound,
+      // FOV stretch and any other code that reads it stay in sync.
+      player.velocity.set(cur.vel.x, cur.vel.y, cur.vel.z);
     }
   }
   // Despawn ships present in prev snapshot but missing now (player left mid-match).
@@ -2624,9 +2645,35 @@ function updatePvP(dt) {
   pvpCollectInputDeltas(dt);
   pvpRenderFromSnapshots();
   pvpCameraFollow();
+  pvpUpdateZoneVisual();
   pvpRenderHUD();
+  if (typeof updateEngineSound === 'function') updateEngineSound();
   if (typeof updateTrails === 'function') updateTrails(dt);
   if (typeof updateExplosions === 'function') updateExplosions(dt);
+  if (typeof applyShake === 'function') applyShake(dt);
+}
+
+// Re-creates the single-player combat-zone visuals (green wireframe sphere
+// fading in near the edge + radiation warning HUD) for the local player.
+function pvpUpdateZoneVisual() {
+  const me = PVP.myId ? PVP.players.get(PVP.myId) : null;
+  if (!me || !me.obj) return;
+  const p = me.obj.position;
+  const d = Math.hypot(p.x, p.y, p.z);
+  const outside = d > COMBAT_ZONE;
+  const edgeProx = Math.max(0, (d - (COMBAT_ZONE - 200)) / 200);
+  if (combatZoneSphere) {
+    combatZoneSphere.material.opacity = Math.min(0.45, edgeProx * 0.45);
+    combatZoneSphere.visible = edgeProx > 0;
+  }
+  if (zoneWarningEl) zoneWarningEl.classList.toggle('active', outside);
+  if (outside && zoneDistanceEl) {
+    const over = d - COMBAT_ZONE;
+    const buffer = CRITICAL_ZONE - COMBAT_ZONE;
+    zoneDistanceEl.textContent = over > buffer
+      ? `RADIATION DAMAGE · ${over.toFixed(0)}u OUT`
+      : `${over.toFixed(0)}u OUT · CRITICAL AT ${buffer}u`;
+  }
 }
 
 function pvpHandleMatchEnd(m) {

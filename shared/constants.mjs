@@ -5,8 +5,10 @@
 // number here changes the game on both sides at the same time.
 
 // ----- Combat zone -----
-export const ZONE_RADIUS    = 1800;   // soft pull-back kicks in here
-export const CRITICAL_ZONE  = 2200;   // radiation damage past this radius
+// Same arena radii as the single-player game so the boundary visual,
+// pull-back behaviour and radiation distance feel identical across modes.
+export const ZONE_RADIUS    = 900;    // soft pull-back kicks in here
+export const CRITICAL_ZONE  = 1100;   // radiation damage past this radius
 export const ZONE_DECEL     = 40;     // base outward deceleration
 export const ZONE_DECEL_K   = 0.6;    // per-unit overshoot scaling
 export const ZONE_DAMAGE_DPS = 12;    // hull/sec past the critical sphere
