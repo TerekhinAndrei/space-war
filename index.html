@@ -324,6 +324,21 @@
   }
   #pvp-death .big { font-size: 64px; letter-spacing: 6px; font-weight: bold; }
   #pvp-death .sub { font-size: 14px; letter-spacing: 2px; opacity: 0.85; margin-top: 6px; }
+  /* Lock-lost hint — shown only when in PvP and the pointer isn't locked,
+     so the player can always see how to get back into the cockpit. */
+  #pvp-engage-hint {
+    position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,16,0,0.82); border: 1px solid #ffcc44; color: #ffcc44;
+    padding: 11px 28px; font-family: 'Courier New', monospace;
+    letter-spacing: 4px; font-size: 13px; text-shadow: 0 0 8px #ffcc44;
+    pointer-events: none; display: none; z-index: 8;
+    animation: pvpEngagePulse 1.1s ease-in-out infinite;
+  }
+  body.pvp.unlocked #pvp-engage-hint { display: block; }
+  @keyframes pvpEngagePulse {
+    0%, 100% { opacity: 0.55; }
+    50%      { opacity: 1; }
+  }
   /* --- ACHIEVEMENTS screen --- */
   #ach-overlay .box {
     border: 1px solid #00ff66; padding: 28px 38px;
@@ -704,6 +719,7 @@
       <div class="sub">RESPAWNING IN <span id="pvp-respawn-s">3</span>...</div>
     </div>
   </div>
+  <div id="pvp-engage-hint">▶ CLICK TO ENGAGE — POINTER LOCK</div>
 </div>
 
 <div id="shop-overlay">
@@ -2830,6 +2846,45 @@ function pvpHandleLobby() {
   if (gameMode === 'pvp') pvpReturnToLobby();
 }
 
+// In-match pause menu. The server keeps running (PvP doesn't actually
+// pause), but the player still needs a way to recover from a dropped
+// pointer-lock, see what's happening and leave the match cleanly. This
+// is the analogue of pauseGame() for single-player.
+function pvpPauseMenu() {
+  if (overlayMode === 'pvp-pause') return; // already open — idempotent
+  overlayMode = 'pvp-pause';
+  paused = false;                 // sim is not actually paused
+  mouse.down = false;
+  if (document.pointerLockElement) document.exitPointerLock();
+  overlay.style.display = 'flex';
+  overlayBox.innerHTML = `
+    <h1>PAUSED</h1>
+    <h2>SERVER KEEPS THE MATCH RUNNING</h2>
+    <p style="opacity:0.85">Resume — your camera & inputs come back online.</p>
+    <div class="menu-btns" style="margin-top:18px">
+      <div class="menu-btn primary" id="mb-pvp-resume">▶ RESUME</div>
+      <div class="menu-btn" id="mb-pvp-pause-help">? HOW TO PLAY</div>
+      <div class="menu-btn" id="mb-pvp-pause-settings">⚙ SETTINGS</div>
+      <div class="menu-btn" id="mb-pvp-leave-match">◀ LEAVE MATCH</div>
+    </div>
+  `;
+  document.getElementById('mb-pvp-resume').addEventListener('click', e => { e.stopPropagation(); pvpResume(); });
+  document.getElementById('mb-pvp-pause-help').addEventListener('click', e => { e.stopPropagation(); showHelp(); });
+  document.getElementById('mb-pvp-pause-settings').addEventListener('click', e => { e.stopPropagation(); showSettings(); });
+  document.getElementById('mb-pvp-leave-match').addEventListener('click', e => {
+    e.stopPropagation();
+    mpDisconnect();
+    pvpExit();
+    showTitleMenu();
+  });
+}
+function pvpResume() {
+  if (overlayMode !== 'pvp-pause') return;
+  overlay.style.display = 'none';
+  overlayMode = 'title';
+  requestLock();
+}
+
 // Hot-wire the existing socket onmessage to forward match traffic.
 function pvpHookSocket(ws) {
   const prev = ws.onmessage;
@@ -3536,7 +3591,12 @@ addEventListener('keydown', e => {
     if (document.getElementById('mp-overlay').style.display === 'flex') { closeMultiplayer(); return; }
     if (document.getElementById('settings-overlay').style.display === 'flex') { closeSettings(); return; }
     if (document.getElementById('shop-overlay').style.display === 'flex') { closeShop(); return; }
-    if (gameMode === 'pvp') { mpDisconnect(); pvpExit(); overlay.style.display = 'flex'; overlayMode = 'title'; return; }
+    if (gameMode === 'pvp') {
+      // Browser ESC also releases pointer lock, which fires the lock
+      // listener below — both paths converge on the PvP pause menu.
+      if (overlayMode !== 'pvp-end') pvpPauseMenu();
+      return;
+    }
     if (started && player.hull > 0 && !paused) pauseGame();
   }
   if (e.code === 'Digit1') player.weapon = 0;
@@ -3568,13 +3628,34 @@ addEventListener('mouseup',   e => { if (!IS_TOUCH && e.button === 0) mouse.down
 
 document.addEventListener('pointerlockchange', () => {
   pointerLocked = document.pointerLockElement === renderer.domElement;
+  document.body.classList.toggle('unlocked', !pointerLocked);
   if (!pointerLocked) {
     // Stop firing when focus is lost so the cursor reappearing doesn't
     // leave the laser stuck on.
     mouse.down = false;
-    if (started && player.hull > 0 && !paused) pauseGame();
+    if (gameMode === 'pvp') {
+      // PvP can't actually pause the sim — server keeps running — but
+      // the player still needs a menu to re-engage or leave cleanly.
+      if (overlayMode !== 'pvp-end') pvpPauseMenu();
+    } else if (started && player.hull > 0 && !paused) {
+      pauseGame();
+    }
   }
 });
+
+// PvP: any mouse click on the canvas re-acquires pointer lock if we don't
+// have it. This mirrors single-player's "click overlay to resume" pattern
+// but inline so the first click after a focus loss / browser ESC just
+// puts you back in the cockpit.
+addEventListener('mousedown', e => {
+  if (gameMode === 'pvp' && !pointerLocked && !IS_TOUCH && e.button === 0
+      && overlay.style.display !== 'flex') {
+    requestLock();
+  }
+});
+// Initial unlocked state — we don't hold pointer lock at page load, so the
+// engage-hint can show correctly the first time we drop into a PvP match.
+document.body.classList.add('unlocked');
 
 function requestLock() {
   if (IS_TOUCH) return;   // pointer lock is desktop-only; mobile uses touch
@@ -4198,6 +4279,7 @@ overlay.addEventListener('click', () => {
   // pause resumes on a background click (its buttons stopPropagation).
   if (overlayMode === 'missionend') showMissionSelect();
   else if (overlayMode === 'pause') resumeGame();
+  else if (overlayMode === 'pvp-pause') pvpResume();
 });
 
 // ====== CAMERA SHAKE ======
