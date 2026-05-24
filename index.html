@@ -720,6 +720,7 @@
     <div id="mission-list"></div>
     <p class="shop-hint" id="mission-stats">HI: 0 · CREDITS: 0</p>
     <div class="menu-btns" style="flex-direction:row;justify-content:center;max-width:none;flex-wrap:wrap">
+      <div class="menu-btn" id="mb-ms-back">◀ MAIN MENU</div>
       <div class="menu-btn" id="mb-ms-ach">★ ACHIEVEMENTS</div>
       <div class="menu-btn" id="mb-ms-settings">⚙ SETTINGS</div>
       <div class="menu-btn" id="mb-ms-help">? HOW TO PLAY</div>
@@ -2697,6 +2698,11 @@ document.getElementById('mb-settings').addEventListener('click', e => { e.stopPr
 document.getElementById('mb-settings-back').addEventListener('click', e => { e.stopPropagation(); closeSettings(); });
 document.getElementById('mb-ms-settings').addEventListener('click', e => { e.stopPropagation(); showSettings(); });
 document.getElementById('mb-ms-help').addEventListener('click', e => { e.stopPropagation(); showHelp(); });
+document.getElementById('mb-ms-back').addEventListener('click', e => {
+  e.stopPropagation();
+  missionOverlay.style.display = 'none';
+  showTitleMenu();
+});
 document.getElementById('mb-shop-close').addEventListener('click', e => { e.stopPropagation(); closeShop(); });
 document.getElementById('mb-help').addEventListener('click', e => { e.stopPropagation(); showHelp(); });
 document.getElementById('mb-help-back').addEventListener('click', e => { e.stopPropagation(); closeHelp(); });
@@ -3970,11 +3976,61 @@ function pauseGame() {
       <div class="menu-btn primary" id="mb-resume">▶ RESUME</div>
       <div class="menu-btn" id="mb-pause-help">? HOW TO PLAY</div>
       <div class="menu-btn" id="mb-pause-settings">⚙ SETTINGS</div>
+      <div class="menu-btn" id="mb-pause-exit">◀ EXIT TO MAIN MENU</div>
     </div>
   `;
   document.getElementById('mb-resume').addEventListener('click', e => { e.stopPropagation(); resumeGame(); });
   document.getElementById('mb-pause-help').addEventListener('click', e => { e.stopPropagation(); showHelp(); });
   document.getElementById('mb-pause-settings').addEventListener('click', e => { e.stopPropagation(); showSettings(); });
+  document.getElementById('mb-pause-exit').addEventListener('click', e => { e.stopPropagation(); exitToMainMenu(); });
+}
+
+// Tear down the active single-player mission and return to the title screen.
+// Used by the pause menu's "EXIT TO MAIN MENU" button. Abandons the run with
+// no score / mission-cleared updates — equivalent to walking away from the
+// console mid-flight.
+function exitToMainMenu() {
+  paused = false;
+  started = false;
+  if (typeof mission === 'object' && mission) {
+    mission.active = false;
+    mission.resolved = true;
+  }
+  if (typeof missionToken !== 'undefined') missionToken++;   // cancel queued spawns
+  silenceEngine();
+  if (typeof resetWorld === 'function') resetWorld();
+  gameMode = 'menu';
+  if (document.pointerLockElement) document.exitPointerLock();
+  showTitleMenu();
+}
+
+// Re-render the start-menu DOM into the shared #overlay/.box element. The
+// pause and end-of-mission flows overwrite overlayBox.innerHTML, so we need
+// an explicit way to restore the title page — otherwise the very first
+// load is the only time the title menu is reachable in a session.
+function showTitleMenu() {
+  overlayMode = 'title';
+  overlay.style.display = 'flex';
+  overlayBox.innerHTML = `
+    <h1>SPACE WAR</h1>
+    <h2>RETRO 3D COMBAT SIMULATOR</h2>
+    <div class="menu-btns">
+      <div class="menu-btn primary" id="mb-missions">▶ MISSIONS</div>
+      <div class="menu-btn" id="mb-mp">⚔ MULTIPLAYER</div>
+      <div class="menu-btn" id="mb-ach">★ ACHIEVEMENTS</div>
+      <div class="menu-btn" id="mb-settings">⚙ SETTINGS</div>
+      <div class="menu-btn" id="mb-help">? HOW TO PLAY</div>
+    </div>
+    <p style="opacity:0.85">HI: <span id="title-hiscore">${save.highScore}</span> · CREDITS: <span id="title-credits">${save.credits}</span></p>
+  `;
+  // Re-wire — the original listeners were attached at module load to the now-
+  // replaced DOM nodes.
+  document.getElementById('mb-missions').addEventListener('click', e => { e.stopPropagation(); showMissionSelect(); });
+  document.getElementById('mb-mp').addEventListener('click', e => { e.stopPropagation(); showMultiplayer(); });
+  document.getElementById('mb-ach').addEventListener('click', e => { e.stopPropagation(); showAchievements(); });
+  document.getElementById('mb-settings').addEventListener('click', e => { e.stopPropagation(); showSettings(); });
+  document.getElementById('mb-help').addEventListener('click', e => { e.stopPropagation(); showHelp(); });
+  updateCreditsHUD();
 }
 
 function resumeGame() {
