@@ -64,9 +64,15 @@ interface PlayerState {
   alive: boolean;
   respawnAtTick: number;
   invulnUntilTick: number;
+  asteroidHitCd: number;     // cooldown so an asteroid can't tick-stack damage
   kills: number;
   deaths: number;
   score: number;
+}
+
+interface Asteroid {
+  pos: Vec3;
+  radius: number;
 }
 
 interface Bullet {
@@ -127,9 +133,11 @@ function randomSpawn(): { pos: Vec3; quat: Quat } {
     y: (Math.random() - 0.5) * 200,
     z: Math.sin(a) * r,
   };
-  // Facing toward origin: forward vector is (0,0,-1) in local space; we want it
-  // pointing from pos toward 0. Build a quaternion from yaw only (atan2).
-  const yaw = Math.atan2(-pos.x, -pos.z); // rotates -Z onto direction-to-origin
+  // Build a yaw-only quaternion so the ship's local -Z forward maps onto
+  // the direction-from-pos-to-origin. The Three.js rotateY(θ) matrix takes
+  // (0,0,-1) to (-sin θ, 0, -cos θ); we want that to equal -pos/|pos|, so
+  //   sin θ = pos.x/|pos|,  cos θ = pos.z/|pos|  →  θ = atan2(pos.x, pos.z).
+  const yaw = Math.atan2(pos.x, pos.z);
   const half = yaw * 0.5;
   const quat: Quat = { x: 0, y: Math.sin(half), z: 0, w: Math.cos(half) };
   return { pos, quat };
@@ -148,6 +156,7 @@ export default class SpaceWarRoom implements Party.Server {
   private inputs  = new Map<string, LatestInput>();
   private bullets: Bullet[] = [];
   private missiles: Missile[] = [];
+  private asteroids: Asteroid[] = [];
   private hitEventBuf: Array<{ shooter: string; victim: string; weapon: number; pos: Vec3 }> = [];
   private fireEventBuf: Array<{ shooter: string; weapon: number; pos: Vec3 }> = [];
   private killEventBuf: Array<{ killer: string | null; victim: string; weapon: number }> = [];
@@ -288,6 +297,23 @@ export default class SpaceWarRoom implements Party.Server {
     this.inputs.clear();
     this.bullets = [];
     this.missiles = [];
+    // Generate the asteroid field once per match. Static positions —
+    // shared identically to every client via MATCH_START so cover is
+    // honest for everyone.
+    this.asteroids = [];
+    for (let i = 0; i < C.ASTEROID_COUNT; i++) {
+      const r = Math.cbrt(Math.random()) * C.ASTEROID_FIELD_R;
+      const t = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      this.asteroids.push({
+        pos: {
+          x: r * Math.sin(phi) * Math.cos(t),
+          y: r * Math.sin(phi) * Math.sin(t) * 0.4,   // flatten the field vertically
+          z: r * Math.cos(phi),
+        },
+        radius: C.ASTEROID_MIN_RADIUS + Math.random() * (C.ASTEROID_MAX_RADIUS - C.ASTEROID_MIN_RADIUS),
+      });
+    }
     this.hitEventBuf = [];
     this.fireEventBuf = [];
     this.killEventBuf = [];
@@ -311,6 +337,7 @@ export default class SpaceWarRoom implements Party.Server {
         alive: true,
         respawnAtTick: 0,
         invulnUntilTick: this.tick + Math.floor(C.RESPAWN_INVULN_S * C.SERVER_TICK_HZ),
+        asteroidHitCd: 0,
         kills: 0,
         deaths: 0,
         score: 0,
@@ -327,6 +354,7 @@ export default class SpaceWarRoom implements Party.Server {
       matchEndsAt: this.matchEndsAt,
       killLimit: C.MATCH_KILL_LIMIT,
       players: [...this.players.values()].map((p) => this.playerProfile(p)),
+      asteroids: this.asteroids,
     });
 
     this.simTimer  = setInterval(() => this.tickSim(),  Math.round(1000 / C.SERVER_TICK_HZ));
@@ -445,6 +473,30 @@ export default class SpaceWarRoom implements Party.Server {
       }
       if (!ps.alive) continue;
 
+      // Asteroid collision — same model as single-player: a cooldown
+      // prevents tick-stacked damage, and the ship is shoved outward.
+      ps.asteroidHitCd = Math.max(0, ps.asteroidHitCd - dt);
+      for (const a of this.asteroids) {
+        const dx = ps.pos.x - a.pos.x;
+        const dy = ps.pos.y - a.pos.y;
+        const dz = ps.pos.z - a.pos.z;
+        const minDist = a.radius + C.SHIP_HIT_RADIUS;
+        const dSq = dx * dx + dy * dy + dz * dz;
+        if (dSq < minDist * minDist) {
+          if (ps.asteroidHitCd <= 0) {
+            this.applyDamage(ps, C.ASTEROID_DAMAGE, null, -1);
+            ps.asteroidHitCd = C.ASTEROID_HIT_CD_S;
+          }
+          const d = Math.sqrt(dSq) || 1;
+          const push = 30;
+          ps.vel.x += (dx / d) * push * dt;
+          ps.vel.y += (dy / d) * push * dt;
+          ps.vel.z += (dz / d) * push * dt;
+          if (!ps.alive) break;
+        }
+      }
+      if (!ps.alive) continue;
+
       // System regen.
       ps.shield = Math.min(C.SHIP_SHIELD, ps.shield + C.SHIP_SHIELD_REGEN * dt);
       ps.energy = Math.min(C.SHIP_ENERGY, ps.energy + C.SHIP_ENERGY_REGEN * dt);
@@ -483,18 +535,30 @@ export default class SpaceWarRoom implements Party.Server {
       b.ttl -= dt;
 
       let consumed = false;
-      for (const ps of this.players.values()) {
-        if (ps.id === b.owner || !ps.alive) continue;
-        if (this.tick < ps.invulnUntilTick) continue;
-        const dx = ps.pos.x - b.pos.x;
-        const dy = ps.pos.y - b.pos.y;
-        const dz = ps.pos.z - b.pos.z;
-        const r = C.SHIP_HIT_RADIUS + C.BULLET_HIT_RADIUS;
-        if (dx * dx + dy * dy + dz * dz < r * r) {
-          this.hitEventBuf.push({ shooter: b.owner, victim: ps.id, weapon: b.weapon, pos: { x: b.pos.x, y: b.pos.y, z: b.pos.z } });
-          this.applyDamage(ps, b.damage, b.owner, b.weapon);
+      // Asteroid block — projectiles can't punch through cover.
+      for (const a of this.asteroids) {
+        const dx = a.pos.x - b.pos.x;
+        const dy = a.pos.y - b.pos.y;
+        const dz = a.pos.z - b.pos.z;
+        if (dx * dx + dy * dy + dz * dz < a.radius * a.radius) {
           consumed = true;
           break;
+        }
+      }
+      if (!consumed) {
+        for (const ps of this.players.values()) {
+          if (ps.id === b.owner || !ps.alive) continue;
+          if (this.tick < ps.invulnUntilTick) continue;
+          const dx = ps.pos.x - b.pos.x;
+          const dy = ps.pos.y - b.pos.y;
+          const dz = ps.pos.z - b.pos.z;
+          const r = C.SHIP_HIT_RADIUS + C.BULLET_HIT_RADIUS;
+          if (dx * dx + dy * dy + dz * dz < r * r) {
+            this.hitEventBuf.push({ shooter: b.owner, victim: ps.id, weapon: b.weapon, pos: { x: b.pos.x, y: b.pos.y, z: b.pos.z } });
+            this.applyDamage(ps, b.damage, b.owner, b.weapon);
+            consumed = true;
+            break;
+          }
         }
       }
       if (consumed || b.ttl <= 0) {
@@ -575,18 +639,30 @@ export default class SpaceWarRoom implements Party.Server {
         m.quat.z = axZ * s;
         m.quat.w = Math.cos(ang * 0.5);
       }
-      // Hit detection.
+      // Hit detection: asteroids first (explode on contact), then ships.
       let hit = false;
-      for (const ps of this.players.values()) {
-        if (ps.id === m.owner || !ps.alive) continue;
-        if (this.tick < ps.invulnUntilTick) continue;
-        const dx = ps.pos.x - m.pos.x, dy = ps.pos.y - m.pos.y, dz = ps.pos.z - m.pos.z;
-        const r = C.SHIP_HIT_RADIUS + C.MISSILE_HIT_RADIUS;
-        if (dx * dx + dy * dy + dz * dz < r * r) {
-          this.hitEventBuf.push({ shooter: m.owner, victim: ps.id, weapon: 2, pos: { x: m.pos.x, y: m.pos.y, z: m.pos.z } });
-          this.applyDamage(ps, m.damage, m.owner, 2);
+      for (const a of this.asteroids) {
+        const dx = a.pos.x - m.pos.x;
+        const dy = a.pos.y - m.pos.y;
+        const dz = a.pos.z - m.pos.z;
+        if (dx * dx + dy * dy + dz * dz < (a.radius + C.MISSILE_HIT_RADIUS) * (a.radius + C.MISSILE_HIT_RADIUS)) {
+          this.hitEventBuf.push({ shooter: m.owner, victim: m.owner, weapon: 2, pos: { x: m.pos.x, y: m.pos.y, z: m.pos.z } });
           hit = true;
           break;
+        }
+      }
+      if (!hit) {
+        for (const ps of this.players.values()) {
+          if (ps.id === m.owner || !ps.alive) continue;
+          if (this.tick < ps.invulnUntilTick) continue;
+          const dx = ps.pos.x - m.pos.x, dy = ps.pos.y - m.pos.y, dz = ps.pos.z - m.pos.z;
+          const r = C.SHIP_HIT_RADIUS + C.MISSILE_HIT_RADIUS;
+          if (dx * dx + dy * dy + dz * dz < r * r) {
+            this.hitEventBuf.push({ shooter: m.owner, victim: ps.id, weapon: 2, pos: { x: m.pos.x, y: m.pos.y, z: m.pos.z } });
+            this.applyDamage(ps, m.damage, m.owner, 2);
+            hit = true;
+            break;
+          }
         }
       }
       if (hit || m.ttl <= 0) {
@@ -717,6 +793,9 @@ export default class SpaceWarRoom implements Party.Server {
         kills: p.kills,
         deaths: p.deaths,
         score: p.score,
+        // Last input seq the server has applied — lets the client
+        // reconcile its predicted state without re-applying acked inputs.
+        ackSeq: this.inputs.get(p.id)?.lastSeq ?? -1,
       })),
       bullets: this.bullets.map((b) => ({
         id: b.id,

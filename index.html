@@ -2171,6 +2171,8 @@ const PVP = {
   players: new Map(),       // id -> { callsign, color, hexColor, obj, trail, labelEl, velocity, ... }
   bullets: new Map(),       // id -> Object3D
   missiles: new Map(),      // id -> Object3D
+  asteroids: [],            // Object3D[] — cosmetic, server is authoritative
+  local: null,              // predicted local state — { pos, vel, quat }
   snapPrev: null,           // for interpolation
   snapCur: null,
   killfeed: [],             // {text, until} entries
@@ -2229,6 +2231,21 @@ function pvpEnter(matchStartMsg) {
   // Build remote-player ship meshes from the MATCH_START roster.
   for (const p of matchStartMsg.players) pvpEnsureShip(p.id, p.callsign, p.color);
 
+  // Build the deterministic asteroid field served by the server. Same
+  // positions and radii for every client → cover is honest for everyone.
+  PVP.asteroids = [];
+  if (Array.isArray(matchStartMsg.asteroids)) {
+    for (const a of matchStartMsg.asteroids) {
+      const mesh = buildAsteroid(a.radius);
+      mesh.position.set(a.pos.x, a.pos.y, a.pos.z);
+      mesh.rotation.set(Math.random()*6.28, Math.random()*6.28, Math.random()*6.28);
+      scene.add(mesh);
+      PVP.asteroids.push(mesh);
+    }
+  }
+  // Predicted state will be initialized from the first snapshot.
+  PVP.local = null;
+
   initAudio();
   setMuted(save.settings.mute);
   requestLock();
@@ -2253,6 +2270,9 @@ function pvpExit() {
   PVP.bullets.clear();
   for (const [id, m] of PVP.missiles) { scene.remove(m); disposeObject(m); }
   PVP.missiles.clear();
+  for (const m of (PVP.asteroids || [])) { scene.remove(m); disposeObject(m); }
+  PVP.asteroids = [];
+  PVP.local = null;
   PVP.snapPrev = null;
   PVP.snapCur = null;
   document.body.classList.remove('pvp', 'dead', 'sb');
@@ -2389,6 +2409,11 @@ function pvpRegisterRespawn(r) {
     ps.obj.position.set(r.pos.x, r.pos.y, r.pos.z);
     ps.obj.quaternion.set(r.quat.x, r.quat.y, r.quat.z, r.quat.w);
   }
+  if (r.id === PVP.myId && PVP.local) {
+    PVP.local.pos.set(r.pos.x, r.pos.y, r.pos.z);
+    PVP.local.vel.set(0, 0, 0);
+    PVP.local.quat.set(r.quat.x, r.quat.y, r.quat.z, r.quat.w);
+  }
 }
 
 function pvpAddKillFeed(html) {
@@ -2475,14 +2500,50 @@ function pvpRenderFromSnapshots() {
         if (ql > 0) { qx /= ql; qy /= ql; qz /= ql; qw /= ql; }
       }
     }
-    if (ps.obj) {
+    if (ps.local) {
+      // Local player: use the PREDICTED state for the visible transform
+      // (camera follow + ship pos), not the snapshot. Reconcile the
+      // prediction toward the server's authoritative state — small drift
+      // is lerped smoothly, a big delta (e.g. teleport on respawn that
+      // bypassed pvpRegisterRespawn) snaps.
+      if (!PVP.local) {
+        PVP.local = {
+          pos:  new THREE.Vector3(cur.pos.x, cur.pos.y, cur.pos.z),
+          vel:  new THREE.Vector3(cur.vel.x, cur.vel.y, cur.vel.z),
+          quat: new THREE.Quaternion(cur.quat.x, cur.quat.y, cur.quat.z, cur.quat.w),
+        };
+      } else {
+        const dx = PVP.local.pos.x - cur.pos.x;
+        const dy = PVP.local.pos.y - cur.pos.y;
+        const dz = PVP.local.pos.z - cur.pos.z;
+        const dPosSq = dx*dx + dy*dy + dz*dz;
+        if (dPosSq > 60 * 60) {
+          // Hard correction — usually a respawn or a big damage / zone push.
+          PVP.local.pos.set(cur.pos.x, cur.pos.y, cur.pos.z);
+          PVP.local.vel.set(cur.vel.x, cur.vel.y, cur.vel.z);
+          PVP.local.quat.set(cur.quat.x, cur.quat.y, cur.quat.z, cur.quat.w);
+        } else {
+          // Soft correction — fold ~25% of the server's authority back into
+          // the predicted state each snapshot so drift fades quickly without
+          // visible rubber-banding.
+          PVP.local.pos.x += (cur.pos.x - PVP.local.pos.x) * 0.25;
+          PVP.local.pos.y += (cur.pos.y - PVP.local.pos.y) * 0.25;
+          PVP.local.pos.z += (cur.pos.z - PVP.local.pos.z) * 0.25;
+          PVP.local.vel.x += (cur.vel.x - PVP.local.vel.x) * 0.3;
+          PVP.local.vel.y += (cur.vel.y - PVP.local.vel.y) * 0.3;
+          PVP.local.vel.z += (cur.vel.z - PVP.local.vel.z) * 0.3;
+          _pvpReconQ.set(cur.quat.x, cur.quat.y, cur.quat.z, cur.quat.w);
+          PVP.local.quat.slerp(_pvpReconQ, 0.25);
+        }
+      }
+      if (ps.obj) {
+        ps.obj.position.copy(PVP.local.pos);
+        ps.obj.quaternion.copy(PVP.local.quat);
+      }
+      player.velocity.copy(PVP.local.vel);
+    } else if (ps.obj) {
       ps.obj.position.set(px, py, pz);
       ps.obj.quaternion.set(qx, qy, qz, qw);
-    }
-    if (ps.local) {
-      // Mirror the server's velocity onto player.velocity so engine sound,
-      // FOV stretch and any other code that reads it stay in sync.
-      player.velocity.set(cur.vel.x, cur.vel.y, cur.vel.z);
     }
   }
   // Despawn ships present in prev snapshot but missing now (player left mid-match).
@@ -2666,25 +2727,58 @@ function pvpRenderHUD() {
   }
 }
 
+const _pvpStepIn = {};   // scratch input object passed to netStepShip
+const _pvpReconQ = new THREE.Quaternion();   // scratch quat used by reconciliation
 function pvpCollectInputDeltas(dt) {
   if (PVP.phase !== 'MATCH') return; // freeze inputs during countdown
-  // Mouse — consumed from the same accumulator the single-player game uses.
+
+  // Compute the rotation chunk for THIS frame from mouse + keyboard +
+  // touch. We immediately apply it to the predicted local state below
+  // AND fold it into the 30 Hz send accumulator so the server applies
+  // exactly the same delta over the same wall-clock period.
+  let dYaw = 0, dPitch = 0, dRoll = 0;
   if (mouse.dx !== 0 || mouse.dy !== 0) {
     const sens = MOUSE_SENS * (save.settings.sensitivity || 1.0);
-    PVP.input.yawAccum   -= mouse.dx * sens;
-    PVP.input.pitchAccum -= mouse.dy * sens;
+    dYaw   -= mouse.dx * sens;
+    dPitch -= mouse.dy * sens;
     mouse.dx = 0; mouse.dy = 0;
   }
-  // Keyboard rotation — arrow keys for yaw/pitch, Q/E for roll.
-  if (keys['ArrowUp'])    PVP.input.pitchAccum +=  PVP_ROT_SPEED * dt;
-  if (keys['ArrowDown'])  PVP.input.pitchAccum -=  PVP_ROT_SPEED * dt;
-  if (keys['ArrowLeft'])  PVP.input.yawAccum   +=  PVP_ROT_SPEED * dt;
-  if (keys['ArrowRight']) PVP.input.yawAccum   -=  PVP_ROT_SPEED * dt;
-  if (keys['KeyQ']) PVP.input.rollAccum +=  PVP_ROT_SPEED * dt;
-  if (keys['KeyE']) PVP.input.rollAccum -=  PVP_ROT_SPEED * dt;
-  // Touch sticks (mobile).
-  if (touch.aimX) PVP.input.yawAccum   -= touch.aimX * 2.4 * dt;
-  if (touch.aimY) PVP.input.pitchAccum -= touch.aimY * 2.4 * dt;
+  if (keys['ArrowUp'])    dPitch +=  PVP_ROT_SPEED * dt;
+  if (keys['ArrowDown'])  dPitch -=  PVP_ROT_SPEED * dt;
+  if (keys['ArrowLeft'])  dYaw   +=  PVP_ROT_SPEED * dt;
+  if (keys['ArrowRight']) dYaw   -=  PVP_ROT_SPEED * dt;
+  if (keys['KeyQ']) dRoll +=  PVP_ROT_SPEED * dt;
+  if (keys['KeyE']) dRoll -=  PVP_ROT_SPEED * dt;
+  if (touch.aimX) dYaw   -= touch.aimX * 2.4 * dt;
+  if (touch.aimY) dPitch -= touch.aimY * 2.4 * dt;
+  PVP.input.yawAccum   += dYaw;
+  PVP.input.pitchAccum += dPitch;
+  PVP.input.rollAccum  += dRoll;
+
+  // ---- Client-side prediction ----
+  // Apply this frame's input to the local predicted state via the same
+  // step function the server runs. The user sees the result of their
+  // input INSTANTLY; the next snapshot will gently correct any drift.
+  if (PVP.local) {
+    let thrustZ = 0, thrustX = 0;
+    if (keys['KeyW']) thrustZ += 1;
+    if (keys['KeyS']) thrustZ -= 1;
+    if (keys['KeyD']) thrustX += 1;
+    if (keys['KeyA']) thrustX -= 1;
+    if (touch.thrust) thrustZ += touch.thrust;
+    if (touch.strafe) thrustX += touch.strafe;
+    if (thrustZ > 1) thrustZ = 1; else if (thrustZ < -1) thrustZ = -1;
+    if (thrustX > 1) thrustX = 1; else if (thrustX < -1) thrustX = -1;
+    _pvpStepIn.yawDelta = dYaw;
+    _pvpStepIn.pitchDelta = dPitch;
+    _pvpStepIn.rollDelta = dRoll;
+    _pvpStepIn.thrustX = thrustX;
+    _pvpStepIn.thrustZ = thrustZ;
+    _pvpStepIn.boost = !!(keys['ShiftLeft'] || keys['ShiftRight'] || touch.boost);
+    _pvpStepIn.brake = !!keys['KeyX'];
+    netStepShip(PVP.local, _pvpStepIn, dt);
+    netApplyZone(PVP.local, dt);
+  }
 }
 
 function pvpSendInput() {
@@ -5055,9 +5149,11 @@ const PLAYER_PROJ_SPEED = 280;
 
 function updateLeadIndicator() {
   if (!player.target) { leadEl.classList.remove('active'); return; }
-  // Only assist at close range — long-range shots must be aimed by feel,
-  // so the player can't snipe everything from outside the dogfight.
-  if (player.obj.position.distanceTo(player.target.obj.position) > 260) {
+  // Range cap is generous in PvP (arena is much larger and pilots
+  // engage from further out) but tighter in single-player to keep
+  // sniping from outside the dogfight unrewarding.
+  const maxRange = gameMode === 'pvp' ? 700 : 260;
+  if (player.obj.position.distanceTo(player.target.obj.position) > maxRange) {
     leadEl.classList.remove('active'); return;
   }
   // Where to aim so a player shot reaches the target.
@@ -5170,8 +5266,6 @@ function updateRadar() {
   }
 
   if (gameMode === 'pvp') {
-    // Plot every other live pilot, plus our missiles in flight so we can
-    // see them tracking. Locked target gets a ring.
     const tgtId = player.target ? player.target.id : null;
     for (const [, ps] of PVP.players) {
       if (ps.local || !ps.alive || !ps.obj) continue;
@@ -5179,6 +5273,11 @@ function updateRadar() {
       plot(ps.obj.position, ps.color || '#ff3344', ring);
     }
     for (const [, m] of PVP.missiles) plot(m.position, '#ffaa44');
+    for (const a of (PVP.asteroids || [])) {
+      if (a.position.distanceTo(player.obj.position) < 250) {
+        plot(a.position, 'rgba(136, 102, 68, 0.7)');
+      }
+    }
     return;
   }
   for (const e of enemies) {

@@ -45,6 +45,14 @@ export const MISSILE_HIT_RADIUS = 2.4;
 export const MISSILE_LOCK_CONE  = 0.7;    // cos(angle) — wider than aim cone for lasers
 export const MISSILE_LOCK_RANGE = 600;
 
+// ----- Asteroids (PvP arena cover) -----
+export const ASTEROID_COUNT      = 28;
+export const ASTEROID_MIN_RADIUS = 4;
+export const ASTEROID_MAX_RADIUS = 14;
+export const ASTEROID_FIELD_R    = 700;   // keep them inside the playable zone
+export const ASTEROID_DAMAGE     = 20;
+export const ASTEROID_HIT_CD_S   = 0.7;
+
 // ----- Match flow -----
 export const COUNTDOWN_S       = 3;
 export const MATCH_DURATION_S  = 180;   // 3 minutes
