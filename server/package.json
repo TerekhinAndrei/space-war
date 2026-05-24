@@ -1,0 +1,16 @@
+{
+  "name": "space-war-server",
+  "version": "0.0.1",
+  "description": "PartyKit server for SPACE WAR PvP multiplayer",
+  "private": true,
+  "scripts": {
+    "dev": "partykit dev",
+    "deploy": "partykit deploy",
+    "tail": "partykit tail",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "partykit": "0.0.115",
+    "typescript": "^5.4.0"
+  }
+}

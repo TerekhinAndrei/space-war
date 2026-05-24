@@ -1,2 +1,6 @@
 .claude/
 .DS_Store
+# Multiplayer server — installed deps, build cache, PartyKit local state
+server/node_modules/
+server/.partykit/
+server/dist/
