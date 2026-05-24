@@ -3585,16 +3585,32 @@ const CAPTURED_KEYS = new Set([
 // When focus is in a text field (callsign / room code inputs) we don't
 // hijack keys with preventDefault, and we skip every in-game shortcut —
 // otherwise the global capture set blocks the user from typing A/S/D/W/M/
-// digits etc. into the lobby. Escape still works (and blurs the field).
-function isTypingInField() {
-  const a = document.activeElement;
-  if (!a) return false;
-  const tag = a.tagName;
-  return tag === 'INPUT' || tag === 'TEXTAREA' || a.isContentEditable;
+// digits etc. into the lobby. We check BOTH e.target (where the keystroke
+// originated) and document.activeElement so a browser quirk in either
+// doesn't leak through. Escape still works (and blurs the field).
+function isFieldEl(el) {
+  if (!el) return false;
+  const tag = el.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || el.isContentEditable === true;
 }
+function isTypingInField(e) {
+  return isFieldEl(e && e.target) || isFieldEl(document.activeElement);
+}
+// CAPTURE-phase listener that stops every keystroke originating in an
+// input from bubbling up to the game's window-level handlers. This is
+// belt-and-suspenders against the bubbling listener's preventDefault
+// ever reaching a captured key while a form field is focused.
 addEventListener('keydown', e => {
-  if (isTypingInField()) {
-    if (e.code === 'Escape' && document.activeElement) document.activeElement.blur();
+  if (isFieldEl(e.target)) e.stopPropagation();
+}, true);
+addEventListener('keyup', e => {
+  if (isFieldEl(e.target)) e.stopPropagation();
+}, true);
+addEventListener('keydown', e => {
+  if (isTypingInField(e)) {
+    if (e.code === 'Escape' && document.activeElement && document.activeElement.blur) {
+      document.activeElement.blur();
+    }
     return;
   }
   keys[e.code] = true;
@@ -3624,7 +3640,7 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyM') { setMuted(!save.settings.mute); showToast(save.settings.mute ? 'SOUND: MUTED' : 'SOUND: ON'); }
 });
 addEventListener('keyup', e => {
-  if (isTypingInField()) return;
+  if (isTypingInField(e)) return;
   keys[e.code] = false;
   if (CAPTURED_KEYS.has(e.code)) e.preventDefault();
   if (e.code === 'Tab' && gameMode === 'pvp') {
