@@ -3582,7 +3582,21 @@ const CAPTURED_KEYS = new Set([
   'ArrowUp','ArrowDown','ArrowLeft','ArrowRight',
   'Digit1','Digit2','Digit3',
 ]);
+// When focus is in a text field (callsign / room code inputs) we don't
+// hijack keys with preventDefault, and we skip every in-game shortcut —
+// otherwise the global capture set blocks the user from typing A/S/D/W/M/
+// digits etc. into the lobby. Escape still works (and blurs the field).
+function isTypingInField() {
+  const a = document.activeElement;
+  if (!a) return false;
+  const tag = a.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || a.isContentEditable;
+}
 addEventListener('keydown', e => {
+  if (isTypingInField()) {
+    if (e.code === 'Escape' && document.activeElement) document.activeElement.blur();
+    return;
+  }
   keys[e.code] = true;
   if (CAPTURED_KEYS.has(e.code)) e.preventDefault();
   if (e.code === 'Escape') {
@@ -3610,6 +3624,7 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyM') { setMuted(!save.settings.mute); showToast(save.settings.mute ? 'SOUND: MUTED' : 'SOUND: ON'); }
 });
 addEventListener('keyup', e => {
+  if (isTypingInField()) return;
   keys[e.code] = false;
   if (CAPTURED_KEYS.has(e.code)) e.preventDefault();
   if (e.code === 'Tab' && gameMode === 'pvp') {
