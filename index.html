@@ -67,6 +67,12 @@
     position: absolute; bottom: 38px;
     font-size: 9px; color: #ffffff; letter-spacing: 3px;
   }
+  .splash-link {
+    color: #00ffff; text-decoration: underline;
+    pointer-events: auto; cursor: pointer;
+    text-underline-offset: 3px;
+  }
+  .splash-link:hover { color: #ffffff; background: #00aaaa; }
   .splash-version {
     position: absolute; top: 36px; right: 26px;
     font-size: 9px; color: #ffffff; letter-spacing: 2px;
@@ -711,13 +717,16 @@
      keystroke / tap fades it out and reveals the main menu. -->
 <div id="splash">
   <div class="splash-version">v1.0  ·  48K</div>
-  <div class="splash-byline">© SECTOR COMMAND  198X</div>
+  <div class="splash-byline">A TEREKHIN DIGITAL CREW PRODUCTION</div>
   <div class="splash-title">SPACE WAR</div>
   <div class="splash-subtitle">A 3D COMBAT SIMULATION</div>
   <div class="splash-spec">CONTROLS: <span class="v">MOUSE + KEYBOARD</span></div>
   <div class="splash-spec">MODES: <span class="v">CAMPAIGN  ·  ENDLESS  ·  PVP</span></div>
   <div class="splash-prompt">▶ PRESS ANY KEY</div>
-  <div class="splash-credit">SPECTRUM EDITION  ·  LOADED FROM TAPE</div>
+  <div class="splash-credit">
+    SPECTRUM EDITION  ·  LOADED FROM TAPE  ·
+    <a class="splash-link" href="https://www.terekhindt.com" target="_blank" rel="noopener noreferrer">WWW.TEREKHINDT.COM</a>
+  </div>
 </div>
 <div id="cockpit-vignette"></div>
 <div id="cockpit-frame">
@@ -976,6 +985,15 @@ if (splashEl) {
   addEventListener('keydown',    dismissSplash, { once: true });
   addEventListener('mousedown',  dismissSplash, { once: true });
   addEventListener('touchstart', dismissSplash, { once: true, passive: true });
+  // The studio link should open the website without dismissing the
+  // splash — let the user follow it and still see the splash when
+  // the new tab takes focus away. stopPropagation keeps the window-
+  // level dismiss handlers from firing.
+  for (const a of splashEl.querySelectorAll('.splash-link')) {
+    a.addEventListener('mousedown',  e => e.stopPropagation());
+    a.addEventListener('touchstart', e => e.stopPropagation(), { passive: true });
+    a.addEventListener('click',      e => e.stopPropagation());
+  }
 }
 
 // ====== CORE SETUP ======
